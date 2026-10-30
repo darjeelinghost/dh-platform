@@ -1,0 +1,514 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#102b46">
+  <meta name="description" content="DarjeelingHost notification centre.">
+
+  <title>Notifications | DarjeelingHost</title>
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .notifications-page {
+      max-width: 900px;
+      width: 92%;
+      margin: 35px auto;
+    }
+
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .notification-header h1 {
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .notification-header p {
+      color: var(--muted);
+      margin: 5px 0;
+    }
+
+    .notification-summary {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .summary-card {
+      flex: 1;
+      padding: 16px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .summary-card strong {
+      display: block;
+      color: var(--primary);
+      font-size: 24px;
+    }
+
+    .summary-card span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .notification-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .notification-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .notification-list {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .notification-item {
+      display: flex;
+      gap: 15px;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+
+    .notification-item.unread {
+      background: #edf5fc;
+    }
+
+    .notification-icon {
+      width: 43px;
+      height: 43px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      background: #eaf3fc;
+      border-radius: 50%;
+      font-size: 20px;
+    }
+
+    .notification-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notification-content h3 {
+      color: var(--primary);
+      font-size: 15px;
+      margin: 0 0 5px;
+    }
+
+    .notification-content p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 0 0 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .notification-time {
+      color: #8794a3;
+      font-size: 11px;
+    }
+
+    .notification-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .small-btn {
+      border: 0;
+      background: transparent;
+      color: var(--secondary);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 0;
+      cursor: pointer;
+    }
+
+    .small-btn:hover {
+      text-decoration: underline;
+    }
+
+    .empty-notifications {
+      text-align: center;
+      padding: 55px 20px;
+      color: var(--muted);
+    }
+
+    .empty-notifications .icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .notification-message {
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      background: #edf5fc;
+      color: var(--primary);
+      font-size: 13px;
+    }
+
+    @media(max-width: 600px) {
+      .notification-item {
+        padding: 15px;
+      }
+
+      .notification-summary {
+        gap: 8px;
+      }
+
+      .summary-card {
+        padding: 12px;
+      }
+
+      .summary-card strong {
+        font-size: 20px;
+      }
+
+      .notification-controls {
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="container navbar">
+
+    <a href="index.html" class="brand">
+      Darjeeling<span>Host</span>
+    </a>
+
+    <button class="menu-toggle" id="menuToggle"
+      aria-label="Toggle navigation" aria-expanded="false">
+      ☰
+    </button>
+
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="driver-profile.html">My Profile</a>
+      <a href="trip-history.html">Trip History</a>
+    </nav>
+
+  </div>
+</header>
+
+<main class="notifications-page">
+
+  <div class="notification-header">
+    <div>
+      <h1>Notifications</h1>
+      <p>All your DarjeelingHost updates in one place.</p>
+    </div>
+
+    <a href="dashboard.html" class="btn btn-outline">
+      Dashboard
+    </a>
+  </div>
+
+  <!-- SUMMARY -->
+
+  <div class="notification-summary">
+
+    <div class="summary-card">
+      <strong id="totalCount">0</strong>
+      <span>Total notifications</span>
+    </div>
+
+    <div class="summary-card">
+      <strong id="unreadCount">0</strong>
+      <span>Unread</span>
+    </div>
+
+  </div>
+
+  <div id="notificationMessage"
+    class="notification-message hidden"
+    role="status" aria-live="polite">
+  </div>
+
+  <!-- FILTERS -->
+
+  <div class="notification-controls">
+
+    <div class="notification-filters">
+
+      <button class="filter-btn active" data-filter="all">
+        All
+      </button>
+
+      <button class="filter-btn" data-filter="unread">
+        Unread
+      </button>
+
+      <button class="filter-btn" data-filter="trip">
+        Trips
+      </button>
+
+      <button class="filter-btn" data-filter="account">
+        Account
+      </button>
+
+      <button class="filter-btn" data-filter="payment">
+        Payments
+      </button>
+
+    </div>
+
+    <button class="btn btn-outline" id="markAllRead">
+      Mark all as read
+    </button>
+
+  </div>
+
+  <!-- NOTIFICATION LIST -->
+
+  <div class="notification-list" id="notificationList">
+
+    <div class="empty-notifications">
+      <div class="icon">🔔</div>
+      <h3>No notifications yet</h3>
+      <p>
+        Trip requests, account updates and other important
+        notifications will appear here.
+      </p>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container footer-content">
+    <strong>DarjeelingHost</strong>
+    <p>© <span id="year"></span> DarjeelingHost</p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("year").textContent =
+    new Date().getFullYear();
+
+  // Mobile navigation
+
+  const menuToggle = document.getElementById("menuToggle");
+  const navLinks = document.getElementById("navLinks");
+
+  menuToggle.addEventListener("click", () => {
+    const isOpen = navLinks.classList.toggle("open");
+    menuToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  // Notification interface state.
+  // Firebase integration will replace this temporary state.
+
+  let notifications = [];
+
+  let currentFilter = "all";
+
+  const notificationList =
+    document.getElementById("notificationList");
+
+  const messageBox =
+    document.getElementById("notificationMessage");
+
+  const iconMap = {
+    trip: "🚗",
+    account: "👤",
+    payment: "💳",
+    system: "🔔"
+  };
+
+  function showMessage(message) {
+    messageBox.textContent = message;
+    messageBox.classList.remove("hidden");
+
+    window.setTimeout(() => {
+      messageBox.classList.add("hidden");
+    }, 3500);
+  }
+
+  function updateSummary() {
+    document.getElementById("totalCount").textContent =
+      notifications.length;
+
+    document.getElementById("unreadCount").textContent =
+      notifications.filter(item => !item.read).length;
+  }
+
+  function renderNotifications() {
+    updateSummary();
+
+    let filtered = notifications.filter(item => {
+      if (currentFilter === "unread") {
+        return !item.read;
+      }
+
+      if (currentFilter === "trip") {
+        return item.category === "trip";
+      }
+
+      if (currentFilter === "account") {
+        return item.category === "account";
+      }
+
+      if (currentFilter === "payment") {
+        return item.category === "payment";
+      }
+
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      notificationList.innerHTML = `
+        <div class="empty-notifications">
+          <div class="icon">🔔</div>
+          <h3>No notifications found</h3>
+          <p>There are no notifications in this category.</p>
+        </div>
+      `;
+      return;
+    }
+
+    notificationList.replaceChildren();
+
+    filtered.forEach(item => {
+      const article = document.createElement("article");
+
+      article.className =
+        "notification-item" + (item.read ? "" : " unread");
+
+      const icon = document.createElement("div");
+      icon.className = "notification-icon";
+      icon.textContent = iconMap[item.category] || "🔔";
+
+      const content = document.createElement("div");
+      content.className = "notification-content";
+
+      const heading = document.createElement("h3");
+      heading.textContent = item.title;
+
+      const description = document.createElement("p");
+      description.textContent = item.message;
+
+      const time = document.createElement("span");
+      time.className = "notification-time";
+      time.textContent = item.time || "";
+
+      const actions = document.createElement("div");
+      actions.className = "notification-actions";
+
+      if (!item.read) {
+        const readButton = document.createElement("button");
+        readButton.className = "small-btn";
+        readButton.textContent = "Mark as read";
+
+        readButton.addEventListener("click", () => {
+          markAsRead(item.id);
+        });
+
+        actions.appendChild(readButton);
+      }
+
+      if (item.link) {
+        const link = document.createElement("a");
+        link.className = "small-btn";
+        link.href = item.link;
+        link.textContent = "View details";
+
+        actions.appendChild(link);
+      }
+
+      content.append(heading, description, time, actions);
+      article.append(icon, content);
+
+      notificationList.appendChild(article);
+    });
+  }
+
+  function markAsRead(id) {
+    notifications = notifications.map(item =>
+      item.id === id ? { ...item, read: true } : item
+    );
+
+    renderNotifications();
+    showMessage("Notification marked as read.");
+  }
+
+  document.getElementById("markAllRead")
+    .addEventListener("click", () => {
+      notifications = notifications.map(item => ({
+        ...item,
+        read: true
+      }));
+
+      renderNotifications();
+      showMessage("All notifications marked as read.");
+    });
+
+  document.querySelectorAll(".filter-btn")
+    .forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn")
+          .forEach(item => item.classList.remove("active"));
+
+        button.classList.add("active");
+
+        currentFilter = button.dataset.filter;
+
+        renderNotifications();
+      });
+    });
+
+  renderNotifications();
+</script>
+
+</body>
+</html>
