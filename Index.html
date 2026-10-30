@@ -8,22 +8,31 @@
 
 <style>
 *{box-sizing:border-box}
+
 body{
   margin:0;
   font-family:Arial,sans-serif;
   background:#f3f5f7;
   color:#202b35;
 }
+
 main{
   max-width:420px;
   margin:50px auto;
   padding:25px;
   background:white;
   border-radius:12px;
+  box-shadow:0 5px 25px rgba(0,0,0,.06);
 }
+
 h1{margin:0;color:#173d59}
 p{color:#697782}
-label{display:block;margin:15px 0 6px}
+
+label{
+  display:block;
+  margin:15px 0 6px;
+}
+
 input,select,button{
   width:100%;
   padding:12px;
@@ -31,6 +40,7 @@ input,select,button{
   border-radius:7px;
   font-size:15px;
 }
+
 button{
   background:#173d59;
   color:white;
@@ -38,15 +48,33 @@ button{
   margin-top:16px;
   cursor:pointer;
 }
-.secondary{background:#e8edf1;color:#173d59}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.secondary{
+  background:#e8edf1;
+  color:#173d59;
+}
+
 .link{
   background:none;
   color:#17628e;
   padding:0;
   width:auto;
+  margin:0;
 }
+
 .hidden{display:none}
-#message{margin-top:15px;font-size:14px}
+
+#message{
+  margin-top:15px;
+  font-size:14px;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
 </style>
 </head>
 
@@ -56,56 +84,82 @@ button{
 <h1>DarjeelingHost</h1>
 <p>Driver Outsourcing Platform · V1</p>
 
+<!-- REGISTRATION -->
+
 <section id="register">
+
 <h3>Create Account</h3>
 
-<label>Full Name</label>
-<input id="name" placeholder="Full name">
+<label for="name">Full Name</label>
+<input id="name" autocomplete="name"
+placeholder="Full name">
 
-<label>Account Type</label>
+<label for="type">Account Type</label>
 <select id="type">
 <option value="driver">Driver</option>
 <option value="travel_agent">Travel Agent</option>
 </select>
 
-<label>Email</label>
-<input id="email" type="email" placeholder="Email address">
+<label for="email">Email</label>
+<input id="email" type="email"
+autocomplete="email" placeholder="Email address">
 
-<label>Password</label>
-<input id="password" type="password" placeholder="Minimum 6 characters">
+<label for="password">Password</label>
+<input id="password" type="password"
+autocomplete="new-password"
+placeholder="Minimum 6 characters">
 
 <button id="registerBtn">Register</button>
 
 <p>Already registered?
 <button class="link" id="goLogin">Login</button>
 </p>
+
 </section>
 
+<!-- LOGIN -->
+
 <section id="login" class="hidden">
+
 <h3>Login</h3>
 
-<label>Email</label>
-<input id="loginEmail" type="email">
+<label for="loginEmail">Email</label>
+<input id="loginEmail" type="email"
+autocomplete="email">
 
-<label>Password</label>
-<input id="loginPassword" type="password">
+<label for="loginPassword">Password</label>
+<input id="loginPassword" type="password"
+autocomplete="current-password">
 
 <button id="loginBtn">Login</button>
 
 <p>
-<button class="link" id="goRegister">Create account</button>
+<button class="link" id="goRegister">
+Create account
+</button>
 </p>
+
 </section>
+
+<!-- DASHBOARD -->
 
 <section id="dashboard" class="hidden">
+
 <h3 id="welcome"></h3>
 <p id="details"></p>
-<button class="secondary" id="logoutBtn">Logout</button>
+
+<button class="secondary" id="logoutBtn">
+Logout
+</button>
+
 </section>
 
-<div id="message"></div>
+<div id="message" role="status"
+aria-live="polite"></div>
 
 </main>
+
+<!-- FIREBASE SDK -->
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -124,6 +178,8 @@ const firebaseConfig = {
   appId: "1:4756587991:web:e5472eb8282e25b05c7792"
 };
 
+// INITIALIZE FIREBASE
+
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
@@ -131,78 +187,118 @@ const db = firebase.firestore();
 
 const $ = id => document.getElementById(id);
 
+function message(text){
+  $("message").textContent = text;
+}
+
 function page(name){
   ["register","login","dashboard"].forEach(id=>{
     $(id).classList.add("hidden");
   });
+
   $(name).classList.remove("hidden");
-  $("message").textContent="";
+  message("");
 }
 
-$("goLogin").onclick=()=>page("login");
-$("goRegister").onclick=()=>page("register");
+// NAVIGATION
+
+$("goLogin").onclick = () => page("login");
+
+$("goRegister").onclick = () => page("register");
 
 // REGISTRATION
 
-$("registerBtn").onclick=async()=>{
+$("registerBtn").onclick = async () => {
 
-  const name=$("name").value.trim();
-  const type=$("type").value;
-  const email=$("email").value.trim();
-  const password=$("password").value;
+  const name = $("name").value.trim();
+  const type = $("type").value;
+  const email = $("email").value.trim();
+  const password = $("password").value;
 
-  if(!name || !email || password.length<6){
-    $("message").textContent=
-      "Enter your details. Password must contain at least 6 characters.";
+  if(!name || !email || password.length < 6){
+    message("Enter your details. Password must contain at least 6 characters.");
+    return;
+  }
+
+  if(!["driver","travel_agent"].includes(type)){
+    message("Invalid account type.");
     return;
   }
 
   try{
-    $("registerBtn").disabled=true;
-    $("message").textContent="Creating account...";
 
-    const result=await auth.createUserWithEmailAndPassword(
-      email,password
+    $("registerBtn").disabled = true;
+    message("Creating account...");
+
+    const result = await auth.createUserWithEmailAndPassword(
+      email,
+      password
     );
 
     await db.collection("users").doc(result.user.uid).set({
-      name:name,
-      email:email,
-      accountType:type,
-      status:"pending",
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+
+      name: name,
+      email: email,
+      accountType: type,
+
+      // New accounts require approval.
+      status: "pending",
+
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+
     });
 
-    $("message").textContent=
-      "Registration successful. Your account is pending approval.";
+    message("Registration successful. Your account is pending approval.");
 
   }catch(error){
-    $("message").textContent=error.message;
+
+    message(error.message);
+
   }finally{
-    $("registerBtn").disabled=false;
+
+    $("registerBtn").disabled = false;
+
   }
+
 };
 
 // LOGIN
 
-$("loginBtn").onclick=async()=>{
+$("loginBtn").onclick = async () => {
+
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
+
+  if(!email || !password){
+    message("Enter your email and password.");
+    return;
+  }
 
   try{
-    $("message").textContent="Logging in...";
+
+    $("loginBtn").disabled = true;
+    message("Logging in...");
 
     await auth.signInWithEmailAndPassword(
-      $("loginEmail").value.trim(),
-      $("loginPassword").value
+      email,
+      password
     );
 
   }catch(error){
-    $("message").textContent=error.message;
+
+    message(error.message);
+
+  }finally{
+
+    $("loginBtn").disabled = false;
+
   }
+
 };
 
 // AUTHENTICATION STATE
 
-auth.onAuthStateChanged(async user=>{
+auth.onAuthStateChanged(async user => {
 
   if(!user){
     page("register");
@@ -211,38 +307,57 @@ auth.onAuthStateChanged(async user=>{
 
   try{
 
-    const doc=await db.collection("users").doc(user.uid).get();
+    const doc = await db.collection("users")
+      .doc(user.uid)
+      .get();
 
     if(!doc.exists){
+
       page("dashboard");
-      $("welcome").textContent="Account profile unavailable";
-      $("details").textContent="Please contact the administrator.";
+
+      $("welcome").textContent = "Account profile unavailable";
+
+      $("details").textContent =
+        "Please contact the administrator.";
+
       return;
     }
 
-    const data=doc.data();
+    const data = doc.data();
 
     page("dashboard");
 
-    $("welcome").textContent="Welcome, "+data.name;
+    $("welcome").textContent =
+      "Welcome, " + (data.name || "User");
 
-    const role=data.accountType==="travel_agent"
-      ?"Travel Agent"
-      :"Driver";
+    const role = data.accountType === "travel_agent"
+      ? "Travel Agent"
+      : "Driver";
 
-    $("details").textContent=
-      role+" | Status: "+data.status+
+    $("details").textContent =
+      role + " | Status: " + data.status +
       ". Operational access requires approval.";
 
   }catch(error){
-    $("message").textContent=error.message;
+
+    message(error.message);
+
   }
 
 });
 
 // LOGOUT
 
-$("logoutBtn").onclick=()=>auth.signOut();
+$("logoutBtn").onclick = async () => {
+
+  try{
+    await auth.signOut();
+    message("Logged out successfully.");
+  }catch(error){
+    message(error.message);
+  }
+
+};
 
 </script>
 </body>
