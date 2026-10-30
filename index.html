@@ -1,1113 +1,1263 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#173d59">
-<title>DarjeelingHost | Trip Network</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DarjeelingHost V1</title>
 
-<style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#f3f5f7;
-  color:#202b35;
-}
-header{
-  background:#173d59;
-  color:white;
-  padding:18px 5%;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:15px;
-  flex-wrap:wrap;
-}
-header h1{margin:0;font-size:23px}
-header p{margin:5px 0 0;color:#d8e5ed;font-size:13px}
-nav{display:flex;gap:8px;flex-wrap:wrap}
-button{
-  border:0;
-  border-radius:7px;
-  padding:11px 15px;
-  font-size:14px;
-  cursor:pointer;
-  background:#173d59;
-  color:white;
-}
-button:disabled{opacity:.55;cursor:not-allowed}
-button.secondary{background:#e7edf2;color:#173d59}
-button.light{background:white;color:#173d59}
-button.danger{background:#a93232}
-button.small{padding:8px 11px;font-size:12px}
-main{
-  width:min(1100px,94%);
-  margin:25px auto 50px;
-}
-.hero{
-  background:white;
-  padding:25px;
-  border-radius:12px;
-  margin-bottom:20px;
-}
-.hero h2{margin:0 0 8px;color:#173d59}
-.hero p{color:#647482;line-height:1.5}
-.panel{
-  background:white;
-  padding:22px;
-  border-radius:12px;
-  margin-bottom:20px;
-  box-shadow:0 3px 15px rgba(0,0,0,.035);
-}
-.panel h2,.panel h3{margin-top:0;color:#173d59}
-.grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:14px;
-}
-label{
-  display:block;
-  font-size:13px;
-  font-weight:bold;
-  margin:12px 0 6px;
-}
-input,select,textarea{
-  width:100%;
-  padding:12px;
-  border:1px solid #ccd5dd;
-  border-radius:7px;
-  font-size:14px;
-  background:white;
-  color:#202b35;
-}
-textarea{min-height:75px;resize:vertical}
-.actions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-top:15px;
-}
-.hidden{display:none!important}
-.muted{color:#71808c;font-size:13px;line-height:1.5}
-.status{
-  display:inline-block;
-  background:#edf2f5;
-  color:#405568;
-  padding:5px 9px;
-  border-radius:20px;
-  font-size:11px;
-  font-weight:bold;
-}
-.status.available{background:#e4f5e9;color:#21733a}
-.status.pending{background:#fff2d9;color:#956300}
-.status.assigned{background:#e5edff;color:#3159a3}
-.trip-list{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:15px;
-}
-.trip-card{
-  border:1px solid #e0e6eb;
-  border-radius:10px;
-  padding:17px;
-  background:#fff;
-}
-.trip-card h3{margin:0 0 10px;color:#173d59}
-.trip-card p{font-size:13px;line-height:1.5;margin:7px 0}
-.trip-card .route{font-size:17px;font-weight:bold}
-.trip-card .actions button{flex:1}
-hr{border:0;border-top:1px solid #e8edf1;margin:18px 0}
-#message{
-  padding:12px;
-  border-radius:8px;
-  margin-bottom:15px;
-  font-size:13px;
-  line-height:1.5;
-  overflow-wrap:anywhere;
-}
-#message:empty{display:none}
-.message-error{background:#fdeaea;color:#982b2b}
-.message-success{background:#e8f6ec;color:#216d37}
-.message-info{background:#e9f1f8;color:#244d6c}
-.empty{
-  padding:25px;
-  text-align:center;
-  color:#71808c;
-  background:#f7f9fa;
-  border-radius:8px;
-  font-size:13px;
-}
-footer{
-  text-align:center;
-  padding:25px;
-  color:#788691;
-  font-size:12px;
-}
-@media(max-width:650px){
-  header{padding:16px}
-  header h1{font-size:20px}
-  main{width:94%;margin-top:15px}
-  .grid{grid-template-columns:1fr}
-  .panel{padding:17px}
-  .hero{padding:20px}
-}
-</style>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f5f7;
+      color: #202b35;
+    }
+
+    header {
+      background: #142d4e;
+      color: white;
+      padding: 18px 16px;
+    }
+
+    .header-inner {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 { margin: 0; font-size: 23px; }
+    header small { color: #d5e3f5; }
+
+    nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    nav button {
+      background: #29496d;
+      color: white;
+      border: 0;
+      padding: 10px 13px;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    nav button:hover { background: #42658c; }
+
+    main {
+      max-width: 1100px;
+      margin: 22px auto;
+      padding: 0 14px 40px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    }
+
+    h2 { margin-top: 0; font-size: 21px; }
+    h3 { margin-bottom: 8px; }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 13px 0 6px;
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccd4dc;
+      border-radius: 7px;
+      font-size: 15px;
+      background: white;
+    }
+
+    textarea { min-height: 90px; resize: vertical; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .btn {
+      border: 0;
+      padding: 11px 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 14px;
+      margin-right: 6px;
+    }
+
+    .primary { background: #1769aa; color: white; }
+    .success { background: #16834a; color: white; }
+    .danger { background: #c83d3d; color: white; }
+    .secondary { background: #e8edf2; color: #263747; }
+
+    .hidden { display: none !important; }
+
+    .muted { color: #687786; font-size: 13px; }
+    .status { font-weight: bold; text-transform: capitalize; }
+    .trip-card {
+      border: 1px solid #e0e5eb;
+      border-radius: 9px;
+      padding: 16px;
+      margin: 13px 0;
+    }
+
+    .trip-card p { margin: 7px 0; line-height: 1.45; }
+    .trip-route { font-size: 18px; font-weight: bold; }
+    .notification {
+      padding: 13px;
+      border-bottom: 1px solid #e5e9ee;
+    }
+
+    .unread { background: #eef6ff; }
+    .badge {
+      display: inline-block;
+      background: #e5edf5;
+      color: #23415e;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 12px;
+      margin: 3px;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 7px;
+      margin: 12px 0;
+      background: #eef6ff;
+      color: #17436b;
+    }
+
+    .error { background: #fff0f0; color: #9b2525; }
+    .empty { color: #687786; padding: 14px 0; }
+
+    @media (max-width: 650px) {
+      .grid { grid-template-columns: 1fr; }
+      header h1 { font-size: 20px; }
+      .card { padding: 15px; }
+    }
+  </style>
 </head>
 
 <body>
 
 <header>
-  <div>
-    <h1>DarjeelingHost</h1>
-    <p>Darjeeling Hills · Driver & Travel Network</p>
+  <div class="header-inner">
+    <div>
+      <h1>DarjeelingHost</h1>
+      <small>Trip Outsourcing Network · V1</small>
+    </div>
+    <div id="accountLabel" class="muted" style="color:white">
+      Not signed in
+    </div>
   </div>
 
   <nav>
-    <button class="light" id="homeBtn">Home</button>
-    <button class="light" id="loginNav">Login</button>
-    <button class="light" id="registerNav">Register</button>
-    <button class="light hidden" id="logoutBtn">Logout</button>
+    <button id="homeNav">Home</button>
+    <button id="loginNav">Login</button>
+    <button id="registerNav">Register</button>
+    <button id="notificationNav" class="hidden">
+      🔔 Notifications <span id="unreadCount">0</span>
+    </button>
+    <button id="logoutNav" class="hidden">Logout</button>
   </nav>
 </header>
 
 <main>
 
-<div id="message" role="status" aria-live="polite"></div>
+  <div id="messageArea"></div>
 
-<section class="hero">
-  <h2>One Network. More Travel Opportunities.</h2>
-  <p>
-    Discover available trips, connect with other drivers,
-    and coordinate outsourcing opportunities across the
-    Darjeeling hills and neighbouring destinations.
-  </p>
-  <div class="actions">
-    <button id="exploreBtn">Explore Available Trips</button>
-    <button class="secondary" id="postTripHero">Post a Trip</button>
-  </div>
-</section>
-
-<!-- REGISTRATION -->
-
-<section id="registerSection" class="panel hidden">
-  <h2>Create an Account</h2>
-  <p class="muted">Register to participate in the DarjeelingHost network.</p>
-
-  <form id="registerForm">
-    <label for="regName">Full Name</label>
-    <input id="regName" required autocomplete="name">
-
-    <label for="regPhone">Phone Number</label>
-    <input id="regPhone" type="tel" required autocomplete="tel">
-
-    <label for="regEmail">Email Address</label>
-    <input id="regEmail" type="email" required autocomplete="email">
-
-    <label for="regRole">Account Type</label>
-    <select id="regRole" required>
-      <option value="driver">Driver</option>
-      <option value="broker">Broker / Travel Agent</option>
-    </select>
-
-    <label for="regPassword">Password</label>
-    <input id="regPassword" type="password"
-      minlength="6" required autocomplete="new-password">
-
-    <button type="submit" id="registerBtn">Create Account</button>
-  </form>
-
-  <p class="muted">
-    Already registered?
-    <button class="small secondary" id="registerLoginBtn" type="button">
-      Login
-    </button>
-  </p>
-</section>
-
-<!-- LOGIN -->
-
-<section id="loginSection" class="panel hidden">
-  <h2>Account Login</h2>
-
-  <form id="loginForm">
-    <label for="loginEmail">Email Address</label>
-    <input id="loginEmail" type="email" required autocomplete="email">
-
-    <label for="loginPassword">Password</label>
-    <input id="loginPassword" type="password"
-      required autocomplete="current-password">
-
-    <button type="submit" id="loginBtn">Login</button>
-  </form>
-
-  <p class="muted">
-    Don't have an account?
-    <button class="small secondary" id="loginRegisterBtn" type="button">
-      Register
-    </button>
-  </p>
-</section>
-
-<!-- ACCOUNT DASHBOARD -->
-
-<section id="accountSection" class="panel hidden">
-  <h2 id="welcome">Welcome</h2>
-  <p id="accountDetails" class="muted"></p>
-  <div id="accountStatus"></div>
-
-  <div class="actions">
-    <button id="myPostsBtn" class="secondary">My Posted Trips</button>
-    <button id="myRequestsBtn" class="secondary">My Requests</button>
-  </div>
-</section>
-
-<!-- POST A TRIP -->
-
-<section id="postSection" class="panel hidden">
-  <h2>Post a Trip for Outsourcing</h2>
-  <p class="muted">
-    Publish a trip so eligible drivers can review it and request the assignment.
-  </p>
-
-  <form id="tripForm">
-
-    <div class="grid">
-      <div>
-        <label for="from">Pickup Location</label>
-        <input id="from" required placeholder="e.g. Darjeeling">
-      </div>
-
-      <div>
-        <label for="to">Destination</label>
-        <input id="to" required placeholder="e.g. Bagdogra Airport">
-      </div>
-
-      <div>
-        <label for="tripDate">Travel Date</label>
-        <input id="tripDate" type="date" required>
-      </div>
-
-      <div>
-        <label for="tripTime">Pickup Time</label>
-        <input id="tripTime" type="time" required>
-      </div>
-
-      <div>
-        <label for="vehicle">Vehicle Requirement</label>
-        <select id="vehicle" required>
-          <option value="Any suitable vehicle">Any suitable vehicle</option>
-          <option value="Hatchback">Hatchback</option>
-          <option value="Sedan">Sedan</option>
-          <option value="SUV">SUV</option>
-          <option value="Premium SUV">Premium SUV</option>
-          <option value="Tempo Traveller">Tempo Traveller</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="seats">Required Seats</label>
-        <select id="seats">
-          <option value="Any">Any</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="12">12</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="fareType">Fare Arrangement</label>
-        <select id="fareType">
-          <option value="Negotiable">Negotiable</option>
-          <option value="Fixed">Fixed amount</option>
-          <option value="Discuss privately">Discuss privately</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="fareAmount">Proposed Fare (optional)</label>
-        <input id="fareAmount" type="number" min="0"
-          placeholder="Enter amount">
+  <!-- HOME / DASHBOARD -->
+  <section id="homeSection">
+    <div class="card">
+      <h2>Available Trips</h2>
+      <p class="muted">
+        Browse trips posted by approved drivers, brokers and travel agents.
+        Approved drivers can request available trips.
+      </p>
+      <button class="btn secondary" id="refreshTripsBtn">
+        Refresh Trips
+      </button>
+      <div id="tripList">
+        <p class="empty">Loading trips...</p>
       </div>
     </div>
 
-    <label for="tripNotes">Additional Information</label>
-    <textarea id="tripNotes"
-      placeholder="Trip details, luggage, return journey, special requirements..."></textarea>
-
-    <button type="submit" id="publishBtn">Publish Trip</button>
-  </form>
-</section>
-
-<!-- COMMON TRIP DASHBOARD -->
-
-<section id="tripsSection" class="panel">
-  <h2>Common Outsourcing Dashboard</h2>
-  <p class="muted">
-    Trips posted by registered drivers, brokers and travel agents.
-  </p>
-
-  <div class="grid">
-    <div>
-      <label for="filterFrom">Search Pickup Location</label>
-      <input id="filterFrom" placeholder="Search location">
+    <div id="accountDashboard" class="card hidden">
+      <h2>My Dashboard</h2>
+      <p>Account: <strong id="profileName">-</strong></p>
+      <p>Account type: <strong id="profileRole">-</strong></p>
+      <p>Approval status: <span id="profileStatus" class="status">-</span></p>
+      <p class="muted">
+        Only approved accounts can post trips. Only approved drivers can
+        request trips.
+      </p>
     </div>
 
-    <div>
-      <label for="filterTo">Search Destination</label>
-      <input id="filterTo" placeholder="Search destination">
+    <!-- POST TRIP -->
+    <div id="postTripCard" class="card hidden">
+      <h2>Post a Trip</h2>
+
+      <form id="tripForm">
+
+        <div class="grid">
+          <div>
+            <label for="pickupLocation">Short Pickup Location</label>
+            <input id="pickupLocation" maxlength="100"
+              placeholder="e.g. Chowk Bazaar, Darjeeling" required>
+          </div>
+
+          <div>
+            <label for="source">Source / Starting Point</label>
+            <input id="source" maxlength="120"
+              placeholder="e.g. Darjeeling" required>
+          </div>
+
+          <div>
+            <label for="destination">Destination</label>
+            <input id="destination" maxlength="120"
+              placeholder="e.g. Bagdogra Airport" required>
+          </div>
+
+          <div>
+            <label for="travelDate">Travel Date</label>
+            <input id="travelDate" type="date" required>
+          </div>
+
+          <div>
+            <label for="travelTime">Pickup Time</label>
+            <input id="travelTime" type="time">
+          </div>
+
+          <div>
+            <label for="tripType">Trip Type</label>
+            <select id="tripType" required>
+              <option value="">Select trip type</option>
+              <option value="One-way">One-way</option>
+              <option value="Round trip">Round trip</option>
+              <option value="Sightseeing">Sightseeing</option>
+              <option value="Airport transfer">Airport transfer</option>
+              <option value="Local transfer">Local transfer</option>
+              <option value="Custom trip">Custom trip</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="vehicleType">Vehicle Type</label>
+            <select id="vehicleType" required>
+              <option value="">Select vehicle</option>
+              <option value="Hatchback">Hatchback</option>
+              <option value="Sedan">Sedan</option>
+              <option value="Luxury Vehicle">Luxury Vehicle</option>
+              <option value="Innova">Innova</option>
+              <option value="Innova Crysta">Innova Crysta</option>
+              <option value="Sumo">Sumo</option>
+              <option value="Omni">Omni</option>
+              <option value="Van">Van</option>
+              <option value="Traveller">Traveller</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="seats">Available Passenger Seats</label>
+            <input id="seats" type="number" min="1" max="30"
+              placeholder="e.g. 4" required>
+          </div>
+
+          <div>
+            <label for="fare">Trip Fare (₹)</label>
+            <input id="fare" type="number" min="0" step="1"
+              placeholder="e.g. 3500" required>
+          </div>
+
+          <div>
+            <label for="negotiable">Fare Negotiable?</label>
+            <select id="negotiable">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="description">Trip Description / Sightseeing Details</label>
+        <textarea id="description" maxlength="1500"
+          placeholder="For sightseeing, mention places to visit, planned stops, duration, itinerary and special instructions."></textarea>
+
+        <button type="submit" class="btn primary" id="postTripBtn">
+          Publish Trip
+        </button>
+      </form>
     </div>
 
-    <div>
-      <label for="filterDate">Filter by Date</label>
-      <input id="filterDate" type="date">
+    <!-- MY TRIPS -->
+    <div id="myTripsCard" class="card hidden">
+      <h2>My Posted Trips</h2>
+      <div id="myTripsList"></div>
     </div>
 
-    <div>
-      <label for="filterVehicle">Vehicle Category</label>
-      <select id="filterVehicle">
-        <option value="">All vehicles</option>
-        <option>Hatchback</option>
-        <option>Sedan</option>
-        <option>SUV</option>
-        <option>Premium SUV</option>
-        <option>Tempo Traveller</option>
-        <option>Any suitable vehicle</option>
+    <!-- MY REQUESTS -->
+    <div id="myRequestsCard" class="card hidden">
+      <h2>My Trip Requests</h2>
+      <div id="myRequestsList"></div>
+    </div>
+
+    <!-- REQUESTS RECEIVED -->
+    <div id="receivedRequestsCard" class="card hidden">
+      <h2>Requests Received</h2>
+      <div id="receivedRequestsList"></div>
+    </div>
+  </section>
+
+  <!-- LOGIN -->
+  <section id="loginSection" class="card hidden">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <label for="loginEmail">Email Address</label>
+      <input id="loginEmail" type="email" required>
+
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" required>
+
+      <button class="btn primary" type="submit">Login</button>
+    </form>
+  </section>
+
+  <!-- REGISTER -->
+  <section id="registerSection" class="card hidden">
+    <h2>Create Account</h2>
+    <form id="registerForm">
+
+      <label for="registerName">Full Name</label>
+      <input id="registerName" maxlength="100" required>
+
+      <label for="registerPhone">Phone Number</label>
+      <input id="registerPhone" type="tel" maxlength="25" required>
+
+      <label for="registerWhatsapp">WhatsApp Number</label>
+      <input id="registerWhatsapp" type="tel" maxlength="25">
+
+      <label for="registerRole">Account Type</label>
+      <select id="registerRole" required>
+        <option value="">Select account type</option>
+        <option value="driver">Driver</option>
+        <option value="broker">Broker / Travel Agent</option>
       </select>
-    </div>
-  </div>
 
-  <div class="actions">
-    <button id="applyFilters">Search Trips</button>
-    <button class="secondary" id="clearFilters">Clear Filters</button>
-  </div>
+      <label for="registerEmail">Email Address</label>
+      <input id="registerEmail" type="email" required>
 
-  <hr>
+      <label for="registerPassword">Password</label>
+      <input id="registerPassword" type="password" minlength="6" required>
 
-  <div id="tripList" class="trip-list">
-    <div class="empty">Loading available trips...</div>
-  </div>
-</section>
+      <button class="btn primary" type="submit">
+        Register
+      </button>
+    </form>
+    <p class="muted">
+      New accounts require administrator approval before posting trips
+      or requesting trips.
+    </p>
+  </section>
 
-<!-- PERSONAL POSTS -->
-
-<section id="myPostsSection" class="panel hidden">
-  <h2>My Posted Trips</h2>
-  <div id="myPostsList" class="trip-list">
-    <div class="empty">Loading your trips...</div>
-  </div>
-</section>
-
-<!-- PERSONAL REQUESTS -->
-
-<section id="myRequestsSection" class="panel hidden">
-  <h2>My Trip Requests</h2>
-  <div id="myRequestsList" class="trip-list">
-    <div class="empty">Loading your requests...</div>
-  </div>
-</section>
+  <!-- CENTRAL NOTIFICATIONS -->
+  <section id="notificationsSection" class="card hidden">
+    <h2>🔔 Notifications</h2>
+    <p class="muted">All your platform notifications appear here.</p>
+    <div id="notificationList"></div>
+  </section>
 
 </main>
 
-<footer>
-  DarjeelingHost V1 · Connecting the Darjeeling travel community
-</footer>
-
-<!-- FIREBASE MODULE -->
-
 <script type="module">
+  import {
+    db,
+    auth,
+    registerUser,
+    loginUser,
+    logoutUser,
+    observeAuth,
+    getUserProfile,
+    createUserProfile
+  } from "./firebase.js";
 
-import {
-  auth,
-  db,
-  registerUser,
-  loginUser,
-  logoutUser,
-  observeAuth,
-  createUserProfile
-} from "./firebase.js";
+  import {
+    collection,
+    doc,
+    addDoc,
+    getDoc,
+    getDocs,
+    query,
+    where,
+    onSnapshot,
+    updateDoc,
+    serverTimestamp,
+    runTransaction
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
-import {
-  collection,
-  doc,
-  getDoc,
-  addDoc,
-  setDoc,
-  query,
-  where,
-  onSnapshot,
-  serverTimestamp,
-  updateDoc
-} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+  const $ = id => document.getElementById(id);
 
-// ========================================
-// APPLICATION STATE
-// ========================================
+  let currentUser = null;
+  let currentProfile = null;
+  let stopNotificationListener = null;
+  let stopAuthListener = null;
+  let notificationCache = [];
 
-const $ = id => document.getElementById(id);
-
-let currentUser = null;
-let currentProfile = null;
-let allTrips = [];
-let stopTripsListener = null;
-let stopPostsListener = null;
-let stopRequestsListener = null;
-
-// ========================================
-// GENERAL HELPERS
-// ========================================
-
-function showMessage(text, type = "info") {
-  const el = $("message");
-  el.textContent = text;
-  el.className = "message-" + type;
-}
-
-function clearMessage() {
-  $("message").textContent = "";
-  $("message").className = "";
-}
-
-function showSection(id) {
-  [
-    "registerSection",
-    "loginSection",
-    "postSection",
-    "myPostsSection",
-    "myRequestsSection"
-  ].forEach(section => $(section).classList.add("hidden"));
-
-  if (id) $(id).classList.remove("hidden");
-}
-
-function clean(value) {
-  return String(value ?? "").trim();
-}
-
-function safeText(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatDate(value) {
-  if (!value) return "Not specified";
-  const parts = value.split("-");
-  if (parts.length !== 3) return value;
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
-}
-
-function stopPersonalListeners() {
-  if (stopPostsListener) stopPostsListener();
-  if (stopRequestsListener) stopRequestsListener();
-
-  stopPostsListener = null;
-  stopRequestsListener = null;
-}
-
-// ========================================
-// NAVIGATION
-// ========================================
-
-$("homeBtn").onclick = () => {
-  clearMessage();
-  showSection(null);
-  $("tripsSection").scrollIntoView({behavior:"smooth"});
-};
-
-$("loginNav").onclick = () => {
-  showSection("loginSection");
-};
-
-$("registerNav").onclick = () => {
-  showSection("registerSection");
-};
-
-$("registerLoginBtn").onclick = () => {
-  showSection("loginSection");
-};
-
-$("loginRegisterBtn").onclick = () => {
-  showSection("registerSection");
-};
-
-$("exploreBtn").onclick = () => {
-  $("tripsSection").scrollIntoView({behavior:"smooth"});
-};
-
-$("postTripHero").onclick = () => {
-  if (!currentUser) {
-    showMessage("Please login before posting a trip.");
-    showSection("loginSection");
-    return;
+  function showMessage(message, isError = false) {
+    $("messageArea").innerHTML = "";
+    const div = document.createElement("div");
+    div.className = "message" + (isError ? " error" : "");
+    div.textContent = message;
+    $("messageArea").appendChild(div);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  openPostSection();
-};
-
-$("myPostsBtn").onclick = () => {
-  loadMyPosts();
-  showSection("myPostsSection");
-};
-
-$("myRequestsBtn").onclick = () => {
-  loadMyRequests();
-  showSection("myRequestsSection");
-};
-
-// ========================================
-// REGISTRATION
-// ========================================
-
-$("registerForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  const name = clean($("regName").value);
-  const phone = clean($("regPhone").value);
-  const email = clean($("regEmail").value).toLowerCase();
-  const role = $("regRole").value;
-  const password = $("regPassword").value;
-
-  if (!name || !phone || !email || password.length < 6) {
-    showMessage("Please complete all fields. Password must have at least 6 characters.", "error");
-    return;
+  function clearMessage() {
+    $("messageArea").innerHTML = "";
   }
 
-  if (!["driver", "broker"].includes(role)) {
-    showMessage("Invalid account type.", "error");
-    return;
+  function showSection(sectionId) {
+    [
+      "homeSection",
+      "loginSection",
+      "registerSection",
+      "notificationsSection"
+    ].forEach(id => $(id).classList.add("hidden"));
+
+    $(sectionId).classList.remove("hidden");
+    clearMessage();
   }
 
-  const button = $("registerBtn");
+  function safeText(value) {
+    return String(value ?? "");
+  }
 
-  try {
-    button.disabled = true;
-    showMessage("Creating your account...");
+  function formatDate(value) {
+    if (!value) return "Not specified";
+    return safeText(value);
+  }
 
-    const user = await registerUser(email, password, name);
+  function money(value) {
+    return "₹" + Number(value || 0).toLocaleString("en-IN");
+  }
 
-    await createUserProfile(user.uid, {
-      name,
-      email,
-      phone,
-      role,
-      status: "pending"
-    });
+  function isApproved() {
+    return currentProfile &&
+      String(currentProfile.status || "").toLowerCase() === "active";
+  }
 
-    showMessage(
-      "Registration successful. Your account is awaiting approval.",
-      "success"
+  function isDriver() {
+    return currentProfile?.role === "driver";
+  }
+
+  function canPost() {
+    return isApproved() &&
+      ["driver", "broker"].includes(currentProfile?.role);
+  }
+
+  function setLoggedOutNavigation() {
+    $("loginNav").classList.remove("hidden");
+    $("registerNav").classList.remove("hidden");
+    $("logoutNav").classList.add("hidden");
+    $("notificationNav").classList.add("hidden");
+    $("accountLabel").textContent = "Not signed in";
+
+    [
+      "accountDashboard",
+      "postTripCard",
+      "myTripsCard",
+      "myRequestsCard",
+      "receivedRequestsCard"
+    ].forEach(id => $(id).classList.add("hidden"));
+
+    if (stopNotificationListener) {
+      stopNotificationListener();
+      stopNotificationListener = null;
+    }
+  }
+
+  function setLoggedInNavigation() {
+    $("loginNav").classList.add("hidden");
+    $("registerNav").classList.add("hidden");
+    $("logoutNav").classList.remove("hidden");
+    $("notificationNav").classList.remove("hidden");
+    $("accountLabel").textContent =
+      currentUser?.email || "Signed in";
+
+    $("accountDashboard").classList.remove("hidden");
+
+    $("profileName").textContent =
+      currentProfile?.displayName || currentUser?.displayName || "User";
+
+    $("profileRole").textContent =
+      currentProfile?.role || "Unknown";
+
+    $("profileStatus").textContent =
+      currentProfile?.status || "pending";
+
+    $("postTripCard").classList.toggle("hidden", !canPost());
+
+    $("myTripsCard").classList.toggle("hidden", !canPost());
+    $("receivedRequestsCard").classList.toggle("hidden", !canPost());
+
+    $("myRequestsCard").classList.toggle(
+      "hidden",
+      !isApproved() || !isDriver()
     );
 
-    await loadUserProfile(user);
-
-  } catch (error) {
-    console.error(error);
-    showMessage(error.message || "Registration failed.", "error");
-  } finally {
-    button.disabled = false;
-  }
-});
-
-// ========================================
-// LOGIN
-// ========================================
-
-$("loginForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  const email = clean($("loginEmail").value).toLowerCase();
-  const password = $("loginPassword").value;
-  const button = $("loginBtn");
-
-  try {
-    button.disabled = true;
-    showMessage("Signing in...");
-
-    await loginUser(email, password);
-
-  } catch (error) {
-    console.error(error);
-    showMessage(error.message || "Login failed.", "error");
-  } finally {
-    button.disabled = false;
-  }
-});
-
-// ========================================
-// AUTHENTICATION STATE
-// ========================================
-
-observeAuth(async user => {
-  currentUser = user;
-  currentProfile = null;
-
-  if (!user) {
-    $("logoutBtn").classList.add("hidden");
-    $("accountSection").classList.add("hidden");
-    $("postSection").classList.add("hidden");
-    stopPersonalListeners();
-    return;
+    startNotificationsListener();
   }
 
-  $("logoutBtn").classList.remove("hidden");
+  async function createPlatformNotification({
+    recipientUid,
+    type,
+    title,
+    message,
+    tripId = "",
+    requestId = ""
+  }) {
+    if (!recipientUid) return;
 
-  await loadUserProfile(user);
-});
+    await addDoc(collection(db, "notifications"), {
+      recipientUid,
+      senderUid: currentUser.uid,
+      type,
+      title,
+      message,
+      tripId,
+      requestId,
+      read: false,
+      createdAt: serverTimestamp()
+    });
+  }
 
-async function loadUserProfile(user) {
-  try {
-    const profileRef = doc(db, "users", user.uid);
-    const profileSnap = await getDoc(profileRef);
+  function startNotificationsListener() {
+    if (!currentUser) return;
 
-    if (!profileSnap.exists()) {
-      currentProfile = null;
-      $("accountSection").classList.remove("hidden");
-      $("welcome").textContent = "Account profile unavailable";
-      $("accountDetails").textContent =
-        "Your login exists, but your user profile could not be found. Contact the administrator.";
-      $("accountStatus").textContent = "";
-      $("postSection").classList.add("hidden");
+    if (stopNotificationListener) {
+      stopNotificationListener();
+    }
+
+    const q = query(
+      collection(db, "notifications"),
+      where("recipientUid", "==", currentUser.uid)
+    );
+
+    stopNotificationListener = onSnapshot(q, snapshot => {
+      notificationCache = snapshot.docs.map(item => ({
+        id: item.id,
+        ...item.data()
+      }));
+
+      notificationCache.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || 0;
+        const tb = b.createdAt?.toMillis?.() || 0;
+        return tb - ta;
+      });
+
+      const unread = notificationCache.filter(n => !n.read).length;
+      $("unreadCount").textContent = unread;
+      renderNotifications();
+    }, error => {
+      console.error("Notification listener:", error);
+    });
+  }
+
+  function renderNotifications() {
+    const container = $("notificationList");
+    container.innerHTML = "";
+
+    if (!notificationCache.length) {
+      container.innerHTML =
+        '<p class="empty">You have no notifications.</p>';
       return;
     }
 
-    currentProfile = profileSnap.data();
+    notificationCache.forEach(n => {
+      const item = document.createElement("div");
+      item.className = "notification" + (n.read ? "" : " unread");
 
-    $("accountSection").classList.remove("hidden");
-    $("welcome").textContent =
-      "Welcome, " + (currentProfile.name || "User");
+      const title = document.createElement("strong");
+      title.textContent = safeText(n.title || "Notification");
 
-    const roleLabel = currentProfile.role === "broker"
-      ? "Broker / Travel Agent"
-      : currentProfile.role === "driver"
-      ? "Driver"
-      : "Account";
+      const message = document.createElement("p");
+      message.textContent = safeText(n.message);
 
-    $("accountDetails").textContent =
-      roleLabel + " · " + (currentProfile.email || user.email || "");
+      const button = document.createElement("button");
+      button.className = "btn secondary";
+      button.textContent = n.read ? "Read" : "Mark as read";
+      button.disabled = !!n.read;
 
-    $("accountStatus").innerHTML =
-      `<span class="status ${safeText(currentProfile.status)}">Account: ${safeText(currentProfile.status || "unknown")}</span>`;
+      button.addEventListener("click", async () => {
+        try {
+          await updateDoc(doc(db, "notifications", n.id), {
+            read: true
+          });
+        } catch (error) {
+          showMessage("Could not update notification: " + error.message, true);
+        }
+      });
 
-    showSection(null);
+      item.append(title, message);
+      if (!n.read) item.appendChild(button);
+      container.appendChild(item);
+    });
+  }
 
-    if (currentProfile.status === "active") {
-      $("postTripHero").textContent = "Post a Trip";
-    } else {
-      $("postTripHero").textContent = "Account Pending Approval";
+  // NAVIGATION
+  $("homeNav").addEventListener("click", () => {
+    showSection("homeSection");
+    loadTrips();
+  });
+
+  $("loginNav").addEventListener("click", () =>
+    showSection("loginSection")
+  );
+
+  $("registerNav").addEventListener("click", () =>
+    showSection("registerSection")
+  );
+
+  $("notificationNav").addEventListener("click", () =>
+    showSection("notificationsSection")
+  );
+
+  $("logoutNav").addEventListener("click", async () => {
+    try {
+      await logoutUser();
+      showMessage("You have logged out.");
+      showSection("homeSection");
+    } catch (error) {
+      showMessage(error.message, true);
+    }
+  });
+
+  $("refreshTripsBtn").addEventListener("click", loadTrips);
+
+  // REGISTER
+  $("registerForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const name = $("registerName").value.trim();
+    const phone = $("registerPhone").value.trim();
+    const whatsapp = $("registerWhatsapp").value.trim();
+    const role = $("registerRole").value;
+    const email = $("registerEmail").value.trim().toLowerCase();
+    const password = $("registerPassword").value;
+
+    try {
+      const user = await registerUser(email, password, name);
+
+      await createUserProfile(user.uid, {
+        uid: user.uid,
+        displayName: name,
+        phone,
+        whatsapp,
+        email,
+        role,
+        status: "pending"
+      });
+
+      showMessage(
+        "Registration successful. Your account is pending administrator approval."
+      );
+
+      $("registerForm").reset();
+      showSection("homeSection");
+    } catch (error) {
+      showMessage("Registration failed: " + error.message, true);
+    }
+  });
+
+  // LOGIN
+  $("loginForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    try {
+      await loginUser(
+        $("loginEmail").value.trim(),
+        $("loginPassword").value
+      );
+
+      $("loginForm").reset();
+      showSection("homeSection");
+      showMessage("Login successful.");
+    } catch (error) {
+      showMessage("Login failed: " + error.message, true);
+    }
+  });
+
+  // POST A TRIP
+  $("tripForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (!currentUser || !canPost()) {
+      showMessage(
+        "Only approved drivers, brokers and travel agents can post trips.",
+        true
+      );
+      return;
     }
 
-  } catch (error) {
-    console.error(error);
-    showMessage("Unable to load your account profile: " + error.message, "error");
-  }
-}
+    const travelDate = $("travelDate").value;
 
-// ========================================
-// LOGOUT
-// ========================================
+    if (!travelDate) {
+      showMessage("Please select a travel date.", true);
+      return;
+    }
 
-$("logoutBtn").onclick = async () => {
-  try {
-    await logoutUser();
-    currentUser = null;
-    currentProfile = null;
-    stopPersonalListeners();
-    showSection(null);
-    showMessage("You have logged out.", "success");
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-};
+    if (travelDate < new Date().toISOString().slice(0, 10)) {
+      showMessage("Please select today or a future travel date.", true);
+      return;
+    }
 
-// ========================================
-// POST A TRIP
-// ========================================
-
-function openPostSection() {
-  if (!currentUser || !currentProfile) {
-    showMessage("Please login first.");
-    showSection("loginSection");
-    return;
-  }
-
-  if (currentProfile.status !== "active") {
-    showMessage(
-      "Your account is awaiting approval. You can post trips after approval.",
-      "error"
-    );
-    return;
-  }
-
-  if (!["driver", "broker"].includes(currentProfile.role)) {
-    showMessage("Your account does not have permission to post trips.", "error");
-    return;
-  }
-
-  showSection("postSection");
-  $("postSection").scrollIntoView({behavior:"smooth"});
-}
-
-$("postTripHero").onclick = openPostSection;
-
-$("tripForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  if (!currentUser || !currentProfile ||
-      currentProfile.status !== "active") {
-    showMessage("An approved account is required to post a trip.", "error");
-    return;
-  }
-
-  const routeFrom = clean($("from").value);
-  const routeTo = clean($("to").value);
-  const travelDate = $("tripDate").value;
-  const travelTime = $("tripTime").value;
-  const vehicleCategory = $("vehicle").value;
-  const seats = $("seats").value;
-  const fareType = $("fareType").value;
-  const fareAmount = clean($("fareAmount").value);
-  const notes = clean($("tripNotes").value);
-
-  if (!routeFrom || !routeTo || !travelDate || !travelTime) {
-    showMessage("Please complete the route, date and time.", "error");
-    return;
-  }
-
-  if (routeFrom.toLowerCase() === routeTo.toLowerCase()) {
-    showMessage("Pickup and destination cannot be the same.", "error");
-    return;
-  }
-
-  const button = $("publishBtn");
-
-  try {
-    button.disabled = true;
-    showMessage("Publishing your trip...");
-
-    await addDoc(collection(db, "tripPosts"), {
-      routeFrom,
-      routeTo,
+    const trip = {
+      pickupLocation: $("pickupLocation").value.trim(),
+      source: $("source").value.trim(),
+      destination: $("destination").value.trim(),
       travelDate,
-      travelTime,
-      vehicleCategory,
-      seats,
-      fareType,
-      fareAmount: fareAmount ? Number(fareAmount) : null,
-      notes,
+      travelTime: $("travelTime").value,
+      tripType: $("tripType").value,
+      vehicleType: $("vehicleType").value,
+      seats: Number($("seats").value),
+      fare: Number($("fare").value),
+      negotiable: $("negotiable").value === "true",
+      description: $("description").value.trim(),
 
       posterUid: currentUser.uid,
-      posterName: currentProfile.name || "",
+      posterName:
+        currentProfile.displayName || currentUser.displayName || "User",
       posterRole: currentProfile.role,
 
       status: "available",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
 
-    $("tripForm").reset();
+    if (trip.seats < 1 || trip.seats > 30 || trip.fare < 0) {
+      showMessage("Please check the seats and fare values.", true);
+      return;
+    }
 
-    showMessage("Your trip has been published.", "success");
-    showSection(null);
-    $("tripsSection").scrollIntoView({behavior:"smooth"});
+    $("postTripBtn").disabled = true;
 
-  } catch (error) {
-    console.error(error);
-    showMessage(
-      "Could not publish the trip. Check your Firestore rules. " + error.message,
-      "error"
-    );
-  } finally {
-    button.disabled = false;
-  }
-});
+    try {
+      await addDoc(collection(db, "tripPosts"), trip);
 
-// ========================================
-// COMMON LIVE TRIP DASHBOARD
-// ========================================
+      $("tripForm").reset();
+      showMessage("Your trip has been published successfully.");
 
-function startTripsListener() {
-  if (stopTripsListener) stopTripsListener();
-
-  const tripsQuery = query(
-    collection(db, "tripPosts"),
-    where("status", "==", "available")
-  );
-
-  stopTripsListener = onSnapshot(tripsQuery, snapshot => {
-    allTrips = snapshot.docs.map(item => ({
-      id: item.id,
-      ...item.data()
-    }));
-
-    allTrips.sort((a, b) => {
-      const dateA = a.travelDate || "";
-      const dateB = b.travelDate || "";
-      return dateA.localeCompare(dateB);
-    });
-
-    renderTrips();
-
-  }, error => {
-    console.error(error);
-    $("tripList").innerHTML =
-      `<div class="empty">Unable to load trips. Check Firestore rules and permissions.</div>`;
-  });
-}
-
-function renderTrips() {
-  const searchFrom = clean($("filterFrom").value).toLowerCase();
-  const searchTo = clean($("filterTo").value).toLowerCase();
-  const searchDate = $("filterDate").value;
-  const searchVehicle = $("filterVehicle").value;
-
-  const filtered = allTrips.filter(trip => {
-    const fromMatch = (trip.routeFrom || "").toLowerCase().includes(searchFrom);
-    const toMatch = (trip.routeTo || "").toLowerCase().includes(searchTo);
-    const dateMatch = !searchDate || trip.travelDate === searchDate;
-    const vehicleMatch = !searchVehicle ||
-      trip.vehicleCategory === searchVehicle ||
-      trip.vehicleCategory === "Any suitable vehicle";
-
-    return fromMatch && toMatch && dateMatch && vehicleMatch;
+      await loadTrips();
+      await loadMyTrips();
+    } catch (error) {
+      showMessage("Could not publish trip: " + error.message, true);
+    } finally {
+      $("postTripBtn").disabled = false;
+    }
   });
 
-  if (!filtered.length) {
-    $("tripList").innerHTML =
-      `<div class="empty">No available trips found. Check again later.</div>`;
-    return;
-  }
+  // LOAD AVAILABLE TRIPS
+  async function loadTrips() {
+    const container = $("tripList");
+    container.innerHTML = '<p class="empty">Loading trips...</p>';
 
-  $("tripList").innerHTML = filtered.map(trip => `
-    <article class="trip-card">
-      <span class="status available">AVAILABLE</span>
+    try {
+      const q = query(
+        collection(db, "tripPosts"),
+        where("status", "==", "available")
+      );
 
-      <p class="route">
-        ${safeText(trip.routeFrom)} → ${safeText(trip.routeTo)}
-      </p>
+      const snapshot = await getDocs(q);
+      container.innerHTML = "";
 
-      <p><strong>Date:</strong> ${safeText(formatDate(trip.travelDate))}</p>
-      <p><strong>Time:</strong> ${safeText(trip.travelTime || "Not specified")}</p>
-      <p><strong>Vehicle:</strong> ${safeText(trip.vehicleCategory || "Any")}</p>
-      <p><strong>Seats:</strong> ${safeText(trip.seats || "Any")}</p>
-      <p><strong>Fare:</strong> ${safeText(trip.fareType || "Negotiable")}
-        ${trip.fareAmount ? " · " + safeText(trip.fareAmount) : ""}
-      </p>
-      <p><strong>Posted by:</strong> ${safeText(trip.posterRole || "Member")}</p>
-      <p class="muted">${safeText(trip.notes || "")}</p>
-
-      <div class="actions">
-        <button class="small requestBtn"
-          data-trip="${safeText(trip.id)}">
-          Request This Trip
-        </button>
-      </div>
-    </article>
-  `).join("");
-
-  document.querySelectorAll(".requestBtn").forEach(button => {
-    button.onclick = () => requestTrip(button.dataset.trip);
-  });
-}
-
-// ========================================
-// REQUEST A TRIP
-// ========================================
-
-async function requestTrip(tripId) {
-  if (!currentUser || !currentProfile) {
-    showMessage("Please login before requesting a trip.", "error");
-    showSection("loginSection");
-    return;
-  }
-
-  if (currentProfile.status !== "active") {
-    showMessage("Your account must be approved before requesting trips.", "error");
-    return;
-  }
-
-  if (currentProfile.role !== "driver") {
-    showMessage("Only approved driver accounts can request a trip.", "error");
-    return;
-  }
-
-  try {
-    const tripRef = doc(db, "tripPosts", tripId);
-    const tripSnap = await getDoc(tripRef);
-
-    if (!tripSnap.exists() || tripSnap.data().status !== "available") {
-      showMessage("This trip is no longer available.", "error");
-      return;
-    }
-
-    const trip = tripSnap.data();
-
-    if (trip.posterUid === currentUser.uid) {
-      showMessage("You cannot request your own posted trip.", "error");
-      return;
-    }
-
-    const requestId = tripId + "_" + currentUser.uid;
-    const requestRef = doc(db, "tripRequests", requestId);
-    const existingRequest = await getDoc(requestRef);
-
-    if (existingRequest.exists()) {
-      showMessage("You have already requested this trip.", "info");
-      return;
-    }
-
-    await setDoc(requestRef, {
-      tripId,
-      driverUid: currentUser.uid,
-      driverName: currentProfile.name || "",
-      driverPhone: currentProfile.phone || "",
-      tripPosterUid: trip.posterUid,
-      status: "pending",
-      message: "",
-      createdAt: serverTimestamp()
-    });
-
-    showMessage("Your request has been submitted.", "success");
-
-  } catch (error) {
-    console.error(error);
-    showMessage(
-      "Unable to submit request. Check Firestore permissions. " + error.message,
-      "error"
-    );
-  }
-}
-
-// ========================================
-// FILTERS
-// ========================================
-
-$("applyFilters").onclick = renderTrips;
-
-$("clearFilters").onclick = () => {
-  $("filterFrom").value = "";
-  $("filterTo").value = "";
-  $("filterDate").value = "";
-  $("filterVehicle").value = "";
-  renderTrips();
-};
-
-// ========================================
-// MY POSTED TRIPS
-// ========================================
-
-function loadMyPosts() {
-  if (!currentUser) return;
-
-  if (stopPostsListener) stopPostsListener();
-
-  const postsQuery = query(
-    collection(db, "tripPosts"),
-    where("posterUid", "==", currentUser.uid)
-  );
-
-  stopPostsListener = onSnapshot(postsQuery, snapshot => {
-    const posts = snapshot.docs.map(item => ({
-      id: item.id,
-      ...item.data()
-    }));
-
-    if (!posts.length) {
-      $("myPostsList").innerHTML =
-        `<div class="empty">You have not posted any trips yet.</div>`;
-      return;
-    }
-
-    $("myPostsList").innerHTML = posts.map(trip => `
-      <article class="trip-card">
-        <span class="status">${safeText(trip.status || "unknown")}</span>
-        <p class="route">
-          ${safeText(trip.routeFrom)} → ${safeText(trip.routeTo)}
-        </p>
-        <p>Date: ${safeText(formatDate(trip.travelDate))}</p>
-        <p>Vehicle: ${safeText(trip.vehicleCategory)}</p>
-        <p class="muted">Trip ID: ${safeText(trip.id)}</p>
-      </article>
-    `).join("");
-
-  }, error => {
-    console.error(error);
-    $("myPostsList").innerHTML =
-      `<div class="empty">Unable to load your posted trips.</div>`;
-  });
-}
-
-// ========================================
-// MY REQUESTS
-// ========================================
-
-function loadMyRequests() {
-  if (!currentUser) return;
-
-  if (stopRequestsListener) stopRequestsListener();
-
-  const requestsQuery = query(
-    collection(db, "tripRequests"),
-    where("driverUid", "==", currentUser.uid)
-  );
-
-  stopRequestsListener = onSnapshot(requestsQuery, async snapshot => {
-    const requests = snapshot.docs.map(item => ({
-      id: item.id,
-      ...item.data()
-    }));
-
-    if (!requests.length) {
-      $("myRequestsList").innerHTML =
-        `<div class="empty">You have not requested any trips yet.</div>`;
-      return;
-    }
-
-    const cards = await Promise.all(requests.map(async request => {
-      let route = "Trip details unavailable";
-
-      try {
-        const tripSnap = await getDoc(doc(db, "tripPosts", request.tripId));
-        if (tripSnap.exists()) {
-          const trip = tripSnap.data();
-          route = `${safeText(trip.routeFrom)} → ${safeText(trip.routeTo)}`;
-        }
-      } catch (error) {
-        console.error(error);
+      if (snapshot.empty) {
+        container.innerHTML =
+          '<p class="empty">No available trips at the moment.</p>';
+        return;
       }
 
-      return `
-        <article class="trip-card">
-          <span class="status pending">${safeText(request.status || "pending")}</span>
-          <p class="route">${route}</p>
-          <p>Request status: ${safeText(request.status || "pending")}</p>
-          <p class="muted">Request ID: ${safeText(request.id)}</p>
-        </article>
-      `;
-    }));
+      const trips = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
 
-    $("myRequestsList").innerHTML = cards.join("");
+      trips.sort((a, b) => {
+        return safeText(a.travelDate).localeCompare(safeText(b.travelDate));
+      });
 
-  }, error => {
-    console.error(error);
-    $("myRequestsList").innerHTML =
-      `<div class="empty">Unable to load your requests.</div>`;
+      trips.forEach(trip => {
+        const card = document.createElement("div");
+        card.className = "trip-card";
+
+        const route = document.createElement("div");
+        route.className = "trip-route";
+        route.textContent =
+          safeText(trip.source) + " → " + safeText(trip.destination);
+
+        const pickup = document.createElement("p");
+        pickup.textContent =
+          "Pickup: " + safeText(trip.pickupLocation);
+
+        const details = document.createElement("p");
+        details.textContent =
+          "Date: " + formatDate(trip.travelDate) +
+          " · Time: " + safeText(trip.travelTime || "Not specified");
+
+        const type = document.createElement("p");
+        type.textContent =
+          "Trip type: " + safeText(trip.tripType);
+
+        const vehicle = document.createElement("p");
+        vehicle.textContent =
+          "Vehicle: " + safeText(trip.vehicleType) +
+          " · Seats: " + safeText(trip.seats);
+
+        const fare = document.createElement("p");
+        fare.textContent =
+          "Fare: " + money(trip.fare) +
+          (trip.negotiable ? " (Negotiable)" : "");
+
+        const description = document.createElement("p");
+        description.textContent =
+          "Description: " + safeText(trip.description || "Not provided");
+
+        const poster = document.createElement("p");
+        poster.className = "muted";
+        poster.textContent =
+          "Posted by: " + safeText(trip.posterName) +
+          " (" + safeText(trip.posterRole) + ")";
+
+        const status = document.createElement("span");
+        status.className = "badge";
+        status.textContent = "Available";
+
+        card.append(
+          route, pickup, details, type, vehicle, fare,
+          description, poster, status
+        );
+
+        if (currentUser && isDriver() && isApproved() &&
+            trip.posterUid !== currentUser.uid) {
+          const requestButton = document.createElement("button");
+          requestButton.className = "btn primary";
+          requestButton.textContent = "Request This Trip";
+          requestButton.addEventListener("click", () =>
+            requestTrip(trip)
+          );
+          card.appendChild(requestButton);
+        }
+
+        if (!currentUser) {
+          const loginHint = document.createElement("p");
+          loginHint.className = "muted";
+          loginHint.textContent =
+            "Login as an approved driver to request this trip.";
+          card.appendChild(loginHint);
+        }
+
+        container.appendChild(card);
+      });
+
+    } catch (error) {
+      console.error(error);
+      container.innerHTML =
+        '<p class="empty">Could not load trips. Check Firestore permissions.</p>';
+    }
+  }
+
+  // REQUEST A TRIP
+  async function requestTrip(trip) {
+    if (!currentUser || !isDriver() || !isApproved()) {
+      showMessage("Only approved drivers can request trips.", true);
+      return;
+    }
+
+    if (trip.posterUid === currentUser.uid) {
+      showMessage("You cannot request your own trip.", true);
+      return;
+    }
+
+    try {
+      const existingQuery = query(
+        collection(db, "tripRequests"),
+        where("tripId", "==", trip.id),
+        where("driverUid", "==", currentUser.uid)
+      );
+
+      const existing = await getDocs(existingQuery);
+
+      if (!existing.empty) {
+        showMessage("You have already requested this trip.", true);
+        return;
+      }
+
+      const requestRef = await addDoc(
+        collection(db, "tripRequests"),
+        {
+          tripId: trip.id,
+          tripSource: trip.source,
+          tripDestination: trip.destination,
+          driverUid: currentUser.uid,
+          driverName:
+            currentProfile.displayName || currentUser.displayName || "Driver",
+          tripPosterUid: trip.posterUid,
+          tripPosterName: trip.posterName,
+          status: "pending",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }
+      );
+
+      // Notifications are separate writes from the trip request.
+      // A notification failure does not undo a successfully submitted request.
+      try {
+        await createPlatformNotification({
+          recipientUid: trip.posterUid,
+          type: "trip_request_received",
+          title: "New trip request",
+          message:
+            (currentProfile.displayName || "A driver") +
+            " requested your trip: " + trip.source + " to " + trip.destination,
+          tripId: trip.id,
+          requestId: requestRef.id
+        });
+
+        await createPlatformNotification({
+          recipientUid: currentUser.uid,
+          type: "trip_request_submitted",
+          title: "Request submitted",
+          message:
+            "Your request for " + trip.source + " to " +
+            trip.destination + " has been submitted.",
+          tripId: trip.id,
+          requestId: requestRef.id
+        });
+      } catch (notificationError) {
+        console.error("Notification creation failed:", notificationError);
+      }
+
+      showMessage("Trip request submitted.");
+      await loadMyRequests();
+
+    } catch (error) {
+      showMessage("Could not submit request: " + error.message, true);
+    }
+  }
+
+  // MY POSTED TRIPS
+  async function loadMyTrips() {
+    if (!currentUser || !canPost()) return;
+
+    const container = $("myTripsList");
+    container.innerHTML = '<p class="empty">Loading your trips...</p>';
+
+    try {
+      const q = query(
+        collection(db, "tripPosts"),
+        where("posterUid", "==", currentUser.uid)
+      );
+
+      const snapshot = await getDocs(q);
+      container.innerHTML = "";
+
+      if (snapshot.empty) {
+        container.innerHTML =
+          '<p class="empty">You have not posted any trips yet.</p>';
+        return;
+      }
+
+      snapshot.forEach(item => {
+        const trip = item.data();
+        const p = document.createElement("p");
+        p.textContent =
+          safeText(trip.source) + " → " + safeText(trip.destination) +
+          " | " + safeText(trip.travelDate) +
+          " | Status: " + safeText(trip.status);
+        container.appendChild(p);
+      });
+
+    } catch (error) {
+      container.textContent = "Could not load your trips: " + error.message;
+    }
+  }
+
+  // MY REQUESTS
+  async function loadMyRequests() {
+    if (!currentUser || !isDriver() || !isApproved()) return;
+
+    const container = $("myRequestsList");
+    container.innerHTML = '<p class="empty">Loading your requests...</p>';
+
+    try {
+      const q = query(
+        collection(db, "tripRequests"),
+        where("driverUid", "==", currentUser.uid)
+      );
+
+      const snapshot = await getDocs(q);
+      container.innerHTML = "";
+
+      if (snapshot.empty) {
+        container.innerHTML =
+          '<p class="empty">You have not requested any trips yet.</p>';
+        return;
+      }
+
+      snapshot.forEach(item => {
+        const request = item.data();
+        const p = document.createElement("p");
+        p.textContent =
+          safeText(request.tripSource) + " → " +
+          safeText(request.tripDestination) +
+          " | Request status: " + safeText(request.status);
+        container.appendChild(p);
+      });
+
+    } catch (error) {
+      container.textContent =
+        "Could not load requests: " + error.message;
+    }
+  }
+
+  // REQUESTS RECEIVED BY THE TRIP POSTER
+  async function loadReceivedRequests() {
+    if (!currentUser || !canPost()) return;
+
+    const container = $("receivedRequestsList");
+    container.innerHTML = '<p class="empty">Loading requests...</p>';
+
+    try {
+      const q = query(
+        collection(db, "tripRequests"),
+        where("tripPosterUid", "==", currentUser.uid)
+      );
+
+      const snapshot = await getDocs(q);
+      container.innerHTML = "";
+
+      if (snapshot.empty) {
+        container.innerHTML =
+          '<p class="empty">No requests received yet.</p>';
+        return;
+      }
+
+      snapshot.forEach(item => {
+        const request = {
+          id: item.id,
+          ...item.data()
+        };
+
+        const card = document.createElement("div");
+        card.className = "trip-card";
+
+        const title = document.createElement("strong");
+        title.textContent =
+          safeText(request.tripSource) + " → " +
+          safeText(request.tripDestination);
+
+        const driver = document.createElement("p");
+        driver.textContent =
+          "Requested by: " + safeText(request.driverName);
+
+        const status = document.createElement("p");
+        status.textContent =
+          "Request status: " + safeText(request.status);
+
+        card.append(title, driver, status);
+
+        if (request.status === "pending") {
+          const accept = document.createElement("button");
+          accept.className = "btn success";
+          accept.textContent = "Accept";
+
+          accept.addEventListener("click", () =>
+            decideRequest(request, "accepted")
+          );
+
+          const reject = document.createElement("button");
+          reject.className = "btn danger";
+          reject.textContent = "Reject";
+
+          reject.addEventListener("click", () =>
+            decideRequest(request, "rejected")
+          );
+
+          card.append(accept, reject);
+        }
+
+        container.appendChild(card);
+      });
+
+    } catch (error) {
+      container.textContent =
+        "Could not load received requests: " + error.message;
+    }
+  }
+
+  // ACCEPT OR REJECT A REQUEST
+  // Acceptance uses a Firestore transaction so two requests cannot
+  // both successfully assign the same trip.
+  async function decideRequest(request, decision) {
+    if (!currentUser || !["accepted", "rejected"].includes(decision)) {
+      return;
+    }
+
+    try {
+      const tripRef = doc(db, "tripPosts", request.tripId);
+      const requestRef = doc(db, "tripRequests", request.id);
+
+      await runTransaction(db, async transaction => {
+        const tripSnap = await transaction.get(tripRef);
+        const requestSnap = await transaction.get(requestRef);
+
+        if (!tripSnap.exists() || !requestSnap.exists()) {
+          throw new Error("Trip or request no longer exists.");
+        }
+
+        const tripData = tripSnap.data();
+        const requestData = requestSnap.data();
+
+        if (tripData.posterUid !== currentUser.uid) {
+          throw new Error("Only the trip poster can decide this request.");
+        }
+
+        if (requestData.tripPosterUid !== currentUser.uid) {
+          throw new Error("You are not authorised to decide this request.");
+        }
+
+        if (requestData.status !== "pending") {
+          throw new Error("This request has already been processed.");
+        }
+
+        if (decision === "accepted") {
+          if (tripData.status !== "available") {
+            throw new Error("This trip has already been assigned.");
+          }
+
+          transaction.update(tripRef, {
+            status: "assigned",
+            assignedDriverUid: requestData.driverUid,
+            assignedDriverName: requestData.driverName,
+            assignedRequestId: request.id,
+            updatedAt: serverTimestamp()
+          });
+
+          transaction.update(requestRef, {
+            status: "accepted",
+            updatedAt: serverTimestamp()
+          });
+
+        } else {
+          transaction.update(requestRef, {
+            status: "rejected",
+            updatedAt: serverTimestamp()
+          });
+        }
+      });
+
+      try {
+        await createPlatformNotification({
+          recipientUid: request.driverUid,
+          type: decision === "accepted"
+            ? "trip_request_accepted"
+            : "trip_request_rejected",
+          title: decision === "accepted"
+            ? "Trip request accepted"
+            : "Trip request rejected",
+          message: decision === "accepted"
+            ? "Your request for " + request.tripSource + " to " +
+              request.tripDestination + " has been accepted."
+            : "Your request for " + request.tripSource + " to " +
+              request.tripDestination + " was not accepted.",
+          tripId: request.tripId,
+          requestId: request.id
+        });
+      } catch (notificationError) {
+        console.error("Decision notification failed:", notificationError);
+      }
+
+      showMessage(
+        decision === "accepted"
+          ? "Driver accepted and trip assigned."
+          : "Request rejected."
+      );
+
+      await loadReceivedRequests();
+      await loadMyTrips();
+      await loadTrips();
+
+    } catch (error) {
+      showMessage("Could not process request: " + error.message, true);
+    }
+  }
+
+  // AUTHENTICATION STATE
+  stopAuthListener = observeAuth(async user => {
+    currentUser = user;
+
+    if (!user) {
+      currentProfile = null;
+      setLoggedOutNavigation();
+      showSection("homeSection");
+      await loadTrips();
+      return;
+    }
+
+    try {
+      currentProfile = await getUserProfile(user.uid);
+
+      if (!currentProfile) {
+        showMessage(
+          "Your account profile was not found. Please contact the administrator.",
+          true
+        );
+        setLoggedOutNavigation();
+        return;
+      }
+
+      setLoggedInNavigation();
+      showSection("homeSection");
+
+      await Promise.all([
+        loadTrips(),
+        loadMyTrips(),
+        loadMyRequests(),
+        loadReceivedRequests()
+      ]);
+
+    } catch (error) {
+      console.error(error);
+      showMessage("Could not load your account: " + error.message, true);
+    }
   });
-}
 
-// ========================================
-// START APPLICATION
-// ========================================
+  // INITIAL PAGE
+  const today = new Date();
+  const localToday = new Date(
+    today.getTime() - today.getTimezoneOffset() * 60000
+  ).toISOString().slice(0, 10);
 
-startTripsListener();
+  $("travelDate").min = localToday;
 
+  loadTrips();
 </script>
 
 </body>
