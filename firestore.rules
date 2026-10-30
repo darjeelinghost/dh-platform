@@ -1,0 +1,207 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =====================================
+    // 1. AUTHENTICATION & ROLE FUNCTIONS
+    // =====================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.admin == true;
+    }
+
+    function isSuperAdmin() {
+      return signedIn()
+        && request.auth.token.superAdmin == true;
+    }
+
+    function isPlatformAdmin() {
+      return isAdmin() || isSuperAdmin();
+    }
+
+    // =====================================
+    // 2. USER ACCOUNTS
+    // =====================================
+
+    match /users/{uid} {
+
+      allow read: if isOwner(uid) || isPlatformAdmin();
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasAll([
+          'email',
+          'role',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'phone',
+          'whatsapp',
+          'photoURL',
+          'role',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.email is string
+        && request.resource.data.role in [
+          'driver',
+          'customer',
+          'broker'
+        ]
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          (
+            request.resource.data.role == 'customer'
+            && request.resource.data.status == 'active'
+          )
+          ||
+          (
+            request.resource.data.role in [
+              'driver',
+              'broker'
+            ]
+            && request.resource.data.status == 'pending'
+          )
+        );
+
+      allow update: if (
+        isOwner(uid)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'name',
+            'phone',
+            'whatsapp',
+            'photoURL',
+            'updatedAt'
+          ])
+      ) || isPlatformAdmin();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =====================================
+    // 3. DRIVER PROFILES
+    // =====================================
+
+    match /drivers/{uid} {
+
+      allow read: if isOwner(uid) || isPlatformAdmin();
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasAll([
+          'verificationStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'phone',
+          'whatsapp',
+          'address',
+          'licenseNumber',
+          'vehicleDetails',
+          'verificationStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.verificationStatus == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if (
+        isOwner(uid)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'phone',
+            'whatsapp',
+            'address',
+            'vehicleDetails',
+            'updatedAt'
+          ])
+      ) || isPlatformAdmin();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =====================================
+    // 4. BROKER PROFILES
+    // =====================================
+
+    match /brokers/{uid} {
+
+      allow read: if isOwner(uid) || isPlatformAdmin();
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasAll([
+          'approvalStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'phone',
+          'whatsapp',
+          'address',
+          'approvalStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.approvalStatus == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if (
+        isOwner(uid)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'phone',
+            'whatsapp',
+            'address',
+            'updatedAt'
+          ])
+      ) || isPlatformAdmin();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =====================================
+    // 5. PLATFORM SETTINGS
+    // =====================================
+
+    match /platformSettings/{documentId} {
+
+      allow read: if isPlatformAdmin();
+
+      allow write: if isSuperAdmin();
+    }
+
+    // =====================================
+    // 6. DEFAULT DENY
+    // =====================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
