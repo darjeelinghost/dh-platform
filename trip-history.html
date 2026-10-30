@@ -1,0 +1,471 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip History | DarjeelingHost</title>
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .history-container {
+      max-width: 1100px;
+      margin: 35px auto;
+      padding: 0 18px;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .history-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .history-tabs button {
+      padding: 10px 16px;
+      border: 1px solid #d7dee5;
+      background: white;
+      color: #263746;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .history-tabs button.active {
+      background: #173f5f;
+      color: white;
+      border-color: #173f5f;
+    }
+
+    .history-search {
+      width: 100%;
+      max-width: 420px;
+      padding: 12px;
+      border: 1px solid #d7dee5;
+      border-radius: 7px;
+      margin-bottom: 20px;
+    }
+
+    .history-card {
+      background: white;
+      border: 1px solid #e0e6eb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.04);
+    }
+
+    .history-card-top {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .route {
+      font-size: 19px;
+      font-weight: bold;
+      color: #173f5f;
+      margin: 12px 0;
+    }
+
+    .history-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .history-info {
+      background: #f5f7f9;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .history-info small {
+      display: block;
+      color: #657585;
+      margin-bottom: 5px;
+    }
+
+    .history-info strong {
+      font-size: 15px;
+    }
+
+    .history-status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      background: #e8edf2;
+      color: #34495e;
+    }
+
+    .status-completed {
+      background: #dff5e7;
+      color: #176b37;
+    }
+
+    .status-cancelled {
+      background: #fde7e7;
+      color: #a52b2b;
+    }
+
+    .status-archived {
+      background: #ececec;
+      color: #555;
+    }
+
+    .payment-unpaid {
+      color: #a52b2b;
+    }
+
+    .payment-partial {
+      color: #946200;
+    }
+
+    .payment-paid {
+      color: #176b37;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .history-actions button {
+      padding: 9px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #173f5f;
+      color: white;
+    }
+
+    .history-actions .secondary {
+      background: #e9eef2;
+      color: #263746;
+    }
+
+    .empty-history {
+      text-align: center;
+      padding: 45px 15px;
+      background: white;
+      border-radius: 10px;
+      color: #657585;
+    }
+
+    .preview-note {
+      background: #fff6df;
+      border: 1px solid #f0dca5;
+      padding: 13px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      color: #70551b;
+      font-size: 14px;
+    }
+
+    @media(max-width:600px) {
+      .history-container {
+        margin-top: 20px;
+      }
+
+      .history-card {
+        padding: 15px;
+      }
+
+      .route {
+        font-size: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo">DarjeelingHost</a>
+
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="trip-details.html">Post a Trip</a>
+      <a href="driver-profile.html">Profile</a>
+      <a href="notifications.html">Notifications</a>
+      <a href="login.html">Login</a>
+    </nav>
+  </div>
+</header>
+
+<main class="history-container">
+
+  <div class="history-header">
+    <div>
+      <h1>Trip History</h1>
+      <p>Review your previous trips and settlement records.</p>
+    </div>
+
+    <a href="dashboard.html" class="btn">Back to Dashboard</a>
+  </div>
+
+  <div class="preview-note">
+    <strong>Preview mode:</strong> The records below are sample data.
+    Archive and restore actions only change this temporary page view.
+    Permanent deletion is not available here.
+  </div>
+
+  <div class="history-tabs">
+    <button class="active" data-filter="all">All Trips</button>
+    <button data-filter="completed">Completed</button>
+    <button data-filter="cancelled">Cancelled</button>
+    <button data-filter="archived">Archived</button>
+  </div>
+
+  <input
+    type="search"
+    id="historySearch"
+    class="history-search"
+    placeholder="Search by trip ID, route or destination..."
+  >
+
+  <div id="historyList"></div>
+
+</main>
+
+<script>
+  const trips = [
+    {
+      id: "DH-1001",
+      source: "Darjeeling",
+      destination: "Bagdogra Airport",
+      date: "2026-10-20",
+      type: "Airport Transfer",
+      fare: 2500,
+      paid: 2500,
+      payment: "paid",
+      status: "completed",
+      archived: false
+    },
+    {
+      id: "DH-1002",
+      source: "Darjeeling",
+      destination: "Mirik",
+      date: "2026-10-22",
+      type: "Sightseeing",
+      fare: 3500,
+      paid: 1500,
+      payment: "partially_paid",
+      status: "completed",
+      archived: false
+    },
+    {
+      id: "DH-1003",
+      source: "Siliguri",
+      destination: "Darjeeling",
+      date: "2026-10-24",
+      type: "One Way",
+      fare: 2200,
+      paid: 0,
+      payment: "unpaid",
+      status: "cancelled",
+      archived: false
+    }
+  ];
+
+  let activeFilter = "all";
+
+  const historyList = document.getElementById("historyList");
+  const searchInput = document.getElementById("historySearch");
+
+  function formatMoney(amount) {
+    return "₹" + Number(amount).toLocaleString("en-IN");
+  }
+
+  function paymentLabel(status) {
+    const labels = {
+      paid: "Paid",
+      unpaid: "Unpaid",
+      partially_paid: "Partially Paid",
+      disputed: "Disputed"
+    };
+
+    return labels[status] || status;
+  }
+
+  function renderHistory() {
+    const search = searchInput.value.toLowerCase().trim();
+
+    const filtered = trips.filter(trip => {
+      const isArchived = trip.archived;
+      const matchesTab =
+        activeFilter === "all" ||
+        (activeFilter === "archived" && isArchived) ||
+        (activeFilter === "completed" &&
+          trip.status === "completed" && !isArchived) ||
+        (activeFilter === "cancelled" &&
+          trip.status === "cancelled" && !isArchived);
+
+      const searchable =
+        `${trip.id} ${trip.source} ${trip.destination} ${trip.type}`
+          .toLowerCase();
+
+      return matchesTab && searchable.includes(search);
+    });
+
+    if (filtered.length === 0) {
+      historyList.innerHTML = `
+        <div class="empty-history">
+          <h3>No trips found</h3>
+          <p>There are no records matching this selection.</p>
+        </div>
+      `;
+      return;
+    }
+
+    historyList.innerHTML = filtered.map(trip => {
+      const balance = Math.max(0, trip.fare - trip.paid);
+
+      const statusClass = trip.archived
+        ? "status-archived"
+        : trip.status === "completed"
+          ? "status-completed"
+          : "status-cancelled";
+
+      const paymentClass =
+        trip.payment === "paid" ? "payment-paid" :
+        trip.payment === "partially_paid" ? "payment-partial" :
+        "payment-unpaid";
+
+      return `
+        <article class="history-card">
+
+          <div class="history-card-top">
+            <div>
+              <strong>${trip.id}</strong>
+              <p>${trip.type}</p>
+            </div>
+
+            <div>
+              <span class="history-status ${statusClass}">
+                ${trip.archived ? "Archived" : trip.status}
+              </span>
+            </div>
+          </div>
+
+          <div class="route">
+            ${trip.source} → ${trip.destination}
+          </div>
+
+          <p>Travel date: ${trip.date}</p>
+
+          <div class="history-grid">
+
+            <div class="history-info">
+              <small>Agreed Fare</small>
+              <strong>${formatMoney(trip.fare)}</strong>
+            </div>
+
+            <div class="history-info">
+              <small>Amount Paid</small>
+              <strong>${formatMoney(trip.paid)}</strong>
+            </div>
+
+            <div class="history-info">
+              <small>Outstanding Balance</small>
+              <strong>${formatMoney(balance)}</strong>
+            </div>
+
+            <div class="history-info">
+              <small>Payment Status</small>
+              <strong class="${paymentClass}">
+                ${paymentLabel(trip.payment)}
+              </strong>
+            </div>
+
+          </div>
+
+          <div class="history-actions">
+            ${
+              trip.archived
+                ? `<button class="secondary"
+                    onclick="restoreTrip('${trip.id}')">
+                    Restore Trip
+                   </button>`
+                : trip.status === "completed"
+                  ? `<button class="secondary"
+                      onclick="archiveTrip('${trip.id}')">
+                      Archive Trip
+                     </button>`
+                  : ""
+            }
+
+            <button class="secondary"
+              onclick="viewTrip('${trip.id}')">
+              View Details
+            </button>
+          </div>
+
+        </article>
+      `;
+    }).join("");
+  }
+
+  function archiveTrip(id) {
+    const trip = trips.find(item => item.id === id);
+
+    if (!trip || trip.status !== "completed" || trip.archived) {
+      return;
+    }
+
+    if (confirm("Archive this completed trip from your active history view?")) {
+      trip.archived = true;
+      renderHistory();
+    }
+  }
+
+  function restoreTrip(id) {
+    const trip = trips.find(item => item.id === id);
+
+    if (!trip || !trip.archived) return;
+
+    trip.archived = false;
+    renderHistory();
+  }
+
+  function viewTrip(id) {
+    alert(
+      "Trip " + id +
+      "\nDetailed trip records will be connected to Firebase later."
+    );
+  }
+
+  document.querySelectorAll(".history-tabs button").forEach(button => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".history-tabs button")
+        .forEach(item => item.classList.remove("active"));
+
+      button.classList.add("active");
+      activeFilter = button.dataset.filter;
+      renderHistory();
+    });
+  });
+
+  searchInput.addEventListener("input", renderHistory);
+
+  renderHistory();
+</script>
+
+</body>
+</html>
