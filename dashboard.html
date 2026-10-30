@@ -1,0 +1,338 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#102b46">
+  <meta name="description" content="DarjeelingHost trip marketplace dashboard.">
+  <title>Dashboard | DarjeelingHost</title>
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .welcome {
+      margin: 30px 0;
+    }
+
+    .welcome h1 {
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+
+    .welcome p {
+      color: var(--muted);
+    }
+
+    .dashboard-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin: 25px 0;
+    }
+
+    .action-card {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 20px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transition: .2s;
+    }
+
+    .action-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--secondary);
+    }
+
+    .action-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #eaf3fc;
+      display: grid;
+      place-items: center;
+      font-size: 23px;
+    }
+
+    .action-card h3 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 16px;
+    }
+
+    .action-card p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dashboard-section {
+      margin-top: 35px;
+    }
+
+    .dashboard-section h2 {
+      color: var(--primary);
+      font-size: 22px;
+    }
+
+    .empty-state {
+      background: white;
+      border: 1px dashed #ccd6e1;
+      border-radius: var(--radius);
+      padding: 35px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty-state .empty-icon {
+      font-size: 35px;
+      margin-bottom: 10px;
+    }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    @media(max-width:600px) {
+      .dashboard-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="container navbar">
+
+    <a href="index.html" class="brand">
+      Darjeeling<span>Host</span>
+    </a>
+
+    <button class="menu-toggle" id="menuToggle"
+      aria-label="Toggle navigation" aria-expanded="false">
+      ☰
+    </button>
+
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="notifications.html">Notifications</a>
+      <a href="driver-profile.html">My Profile</a>
+      <a href="trip-history.html">Trip History</a>
+    </nav>
+
+    <div class="nav-actions">
+      <a href="login.html" class="btn btn-outline">Login</a>
+    </div>
+
+  </div>
+</header>
+
+<main class="dashboard-layout">
+
+  <!-- WELCOME -->
+
+  <section class="welcome">
+    <h1>Welcome to DarjeelingHost</h1>
+    <p>
+      Your local trip outsourcing and mobility marketplace.
+    </p>
+  </section>
+
+  <!-- MAIN ACTIONS -->
+
+  <section class="dashboard-section">
+
+    <div class="section-heading">
+      <h2>What would you like to do?</h2>
+      <p>Manage your trip activities from one place.</p>
+    </div>
+
+    <div class="dashboard-actions">
+
+      <a href="#available-trips" class="action-card">
+        <div class="action-icon">🔎</div>
+        <div>
+          <h3>Find Available Trips</h3>
+          <p>Explore trip opportunities.</p>
+        </div>
+      </a>
+
+      <a href="trip-details.html" class="action-card">
+        <div class="action-icon">➕</div>
+        <div>
+          <h3>Post a Trip</h3>
+          <p>Publish a new trip requirement.</p>
+        </div>
+      </a>
+
+      <a href="#my-trips" class="action-card">
+        <div class="action-icon">🚗</div>
+        <div>
+          <h3>My Trips</h3>
+          <p>Manage your posted and assigned trips.</p>
+        </div>
+      </a>
+
+      <a href="driver-profile.html" class="action-card">
+        <div class="action-icon">👤</div>
+        <div>
+          <h3>My Profile</h3>
+          <p>Manage your profile and vehicle.</p>
+        </div>
+      </a>
+
+    </div>
+
+  </section>
+
+  <!-- AVAILABLE TRIPS -->
+
+  <section class="dashboard-section" id="available-trips">
+
+    <div class="dashboard-header">
+      <div>
+        <h2>Available Trips</h2>
+        <p style="color:var(--muted);">
+          Browse opportunities posted on the platform.
+        </p>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="tripSearch"
+        placeholder="Search source or destination"
+      >
+
+      <select id="vehicleFilter">
+        <option value="">All Vehicle Types</option>
+        <option value="Hatchback">Hatchback</option>
+        <option value="Sedan">Sedan</option>
+        <option value="Luxury Vehicle">Luxury Vehicle</option>
+        <option value="Innova">Innova</option>
+        <option value="Innova Crysta">Innova Crysta</option>
+        <option value="Sumo">Sumo</option>
+        <option value="Omni">Omni</option>
+        <option value="Van">Van</option>
+        <option value="Traveller">Traveller</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <button class="btn btn-primary" type="button" id="searchTrips">
+        Search
+      </button>
+    </div>
+
+    <div class="empty-state" style="margin-top:20px;">
+      <div class="empty-icon">🧭</div>
+      <h3>No trips loaded yet</h3>
+      <p>
+        Available trip listings will appear here when the
+        marketplace is connected to Firebase.
+      </p>
+    </div>
+
+  </section>
+
+  <!-- MY TRIPS -->
+
+  <section class="dashboard-section" id="my-trips">
+
+    <h2>My Trip Activities</h2>
+
+    <div class="dashboard-actions">
+
+      <a href="trip-details.html" class="action-card">
+        <div class="action-icon">📋</div>
+        <div>
+          <h3>My Posted Trips</h3>
+          <p>View your trip listings and offers.</p>
+        </div>
+      </a>
+
+      <a href="trip-history.html" class="action-card">
+        <div class="action-icon">🗂️</div>
+        <div>
+          <h3>Trip History</h3>
+          <p>View completed and cancelled trips.</p>
+        </div>
+      </a>
+
+    </div>
+
+  </section>
+
+  <!-- QUICK LINKS -->
+
+  <section class="dashboard-section">
+
+    <h2>Account</h2>
+
+    <div class="quick-links">
+      <a href="notifications.html" class="btn btn-outline">
+        🔔 Notifications
+      </a>
+
+      <a href="driver-profile.html" class="btn btn-outline">
+        👤 Profile
+      </a>
+
+      <a href="trip-history.html" class="btn btn-outline">
+        📚 History
+      </a>
+
+      <a href="index.html" class="btn btn-outline">
+        Home
+      </a>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <div class="container footer-content">
+    <strong>DarjeelingHost</strong>
+    <p>© <span id="year"></span> DarjeelingHost</p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("year").textContent =
+    new Date().getFullYear();
+
+  const menuToggle = document.getElementById("menuToggle");
+  const navLinks = document.getElementById("navLinks");
+
+  menuToggle.addEventListener("click", () => {
+    const isOpen = navLinks.classList.toggle("open");
+    menuToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  navLinks.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      navLinks.classList.remove("open");
+      menuToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  document.getElementById("searchTrips")
+    .addEventListener("click", () => {
+      alert(
+        "Trip search will be connected to the Firebase marketplace."
+      );
+    });
+</script>
+
+</body>
+</html>
