@@ -4,478 +4,407 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =========================================
-    // 1. AUTHENTICATION HELPERS
-    // =========================================
-
     function signedIn() {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
+    function admin() {
+      return signedIn() && request.auth.token.admin == true;
     }
 
-    function isAdmin() {
-      return signedIn()
-        && request.auth.token.admin == true;
+    function superAdmin() {
+      return signedIn() && request.auth.token.superadmin == true;
     }
 
-    function isSuperAdmin() {
-      return signedIn()
-        && request.auth.token.superAdmin == true;
+    function platformAdmin() {
+      return admin() || superAdmin();
     }
 
-    function isAdminOrSuperAdmin() {
-      return isAdmin() || isSuperAdmin();
-    }
-
-    function userExists(uid) {
-      return exists(
-        /databases/$(database)/documents/users/$(uid)
-      );
-    }
-
-    function userRole(uid) {
+    function profile(uid) {
       return get(
         /databases/$(database)/documents/users/$(uid)
-      ).data.role;
+      ).data;
     }
 
-    function userStatus(uid) {
-      return get(
-        /databases/$(database)/documents/users/$(uid)
-      ).data.status;
-    }
-
-    function isDriverAccount(uid) {
-      return userExists(uid)
-        && userRole(uid) == 'driver';
-    }
-
-    function isApprovedDriver() {
+    function activeDriver() {
       return signedIn()
-        && isDriverAccount(request.auth.uid)
-        && userStatus(request.auth.uid) == 'active';
+        && profile(request.auth.uid).role == "driver"
+        && profile(request.auth.uid).status == "active";
     }
 
-    function isApprovedPoster() {
+    function activePoster() {
       return signedIn()
-        && userExists(request.auth.uid)
-        && userRole(request.auth.uid) in ['driver', 'broker']
-        && userStatus(request.auth.uid) == 'active';
+        && profile(request.auth.uid).role in ["driver", "broker"]
+        && profile(request.auth.uid).status == "active";
     }
 
-    // =========================================
-    // 2. USER PROFILES
-    // =========================================
-
+    // USER PROFILES
     match /users/{uid} {
-
-      allow get: if isOwner(uid) || isAdminOrSuperAdmin();
-
-      allow list: if isAdminOrSuperAdmin();
-
-      allow create: if isOwner(uid)
-        && request.resource.data.keys().hasOnly([
-          'name',
-          'email',
-          'phone',
-          'whatsapp',
-          'photoURL',
-          'role',
-          'status',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.name is string
-        && request.resource.data.email is string
-        && request.resource.data.role in [
-          'driver',
-          'customer',
-          'broker'
-        ]
-        && (
-          (
-            request.resource.data.role in ['driver', 'broker']
-            && request.resource.data.status == 'pending'
-          )
-          ||
-          (
-            request.resource.data.role == 'customer'
-            && request.resource.data.status == 'active'
-          )
-        )
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-
-      // Users cannot change their own role or approval status.
-      allow update: if (
-        isOwner(uid)
-        && request.resource.data.diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            'name',
-            'email',
-            'phone',
-            'whatsapp',
-            'photoURL',
-            'updatedAt'
-          ])
-        && request.resource.data.updatedAt == request.time
-      ) || isAdminOrSuperAdmin();
-
-      allow delete: if isSuperAdmin();
-    }
-
-    // =========================================
-    // 3. DRIVER PROFILES
-    // =========================================
-
-    match /drivers/{uid} {
-
-      allow get: if isOwner(uid) || isAdminOrSuperAdmin();
-
-      allow list: if isAdminOrSuperAdmin();
-
-      allow create: if isOwner(uid)
-        && isDriverAccount(uid)
-        && request.resource.data.verificationStatus == 'pending';
-
-      allow update: if (
-        isOwner(uid)
-        && request.resource.data.diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            'name',
-            'phone',
-            'whatsapp',
-            'address',
-            'photoURL',
-            'updatedAt'
-          ])
-      ) || isAdminOrSuperAdmin();
-
-      allow delete: if isSuperAdmin();
-    }
-
-    // =========================================
-    // 4. BROKER / TRAVEL AGENT PROFILES
-    // =========================================
-
-    match /brokers/{uid} {
-
-      allow get: if isOwner(uid) || isAdminOrSuperAdmin();
-
-      allow list: if isAdminOrSuperAdmin();
-
-      allow create: if isOwner(uid)
-        && userExists(uid)
-        && userRole(uid) == 'broker';
-
-      allow update: if (
-        isOwner(uid)
-        && request.resource.data.diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            'name',
-            'phone',
-            'whatsapp',
-            'businessName',
-            'address',
-            'updatedAt'
-          ])
-      ) || isAdminOrSuperAdmin();
-
-      allow delete: if isSuperAdmin();
-    }
-
-    // =========================================
-    // 5. VEHICLES
-    // =========================================
-
-    match /vehicles/{vehicleId} {
-
       allow get: if signedIn()
-        && (
-          resource.data.ownerUid == request.auth.uid
-          || isAdminOrSuperAdmin()
-        );
+        && (request.auth.uid == uid || platformAdmin());
 
-      allow list: if signedIn()
-        && (
-          resource.data.ownerUid == request.auth.uid
-          || isAdminOrSuperAdmin()
-        );
+      allow list: if platformAdmin();
 
-      // Pending drivers may register their vehicles.
-      // Approval is required before posting or requesting trips.
       allow create: if signedIn()
-        && isDriverAccount(request.auth.uid)
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.keys().hasOnly([
-          'ownerUid',
-          'registrationNumber',
-          'category',
-          'model',
-          'seats',
-          'fuelType',
-          'isPrimary',
-          'verificationStatus',
-          'vehicleStatus',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.verificationStatus == 'pending'
-        && request.resource.data.vehicleStatus == 'active'
-        && request.resource.data.seats is int
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.role in ["driver", "broker"]
+        && request.resource.data.status == "pending";
 
-      allow update: if (
-        signedIn()
-        && resource.data.ownerUid == request.auth.uid
-        && request.resource.data.ownerUid == resource.data.ownerUid
+      allow update: if signedIn()
+        && request.auth.uid == uid
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
-            'registrationNumber',
-            'category',
-            'model',
-            'seats',
-            'fuelType',
-            'isPrimary',
-            'updatedAt'
-          ])
-      ) || isAdminOrSuperAdmin();
+            "displayName",
+            "phone",
+            "whatsapp",
+            "photoURL",
+            "updatedAt"
+          ]);
 
-      allow delete: if isSuperAdmin();
+      allow update: if platformAdmin();
+      allow delete: if superAdmin();
     }
 
-    // =========================================
-    // 6. COMMON OUTSOURCING TRIP POSTS
-    // =========================================
+    // DRIVER PROFILES
+    match /drivers/{uid} {
+      allow read: if signedIn()
+        && (request.auth.uid == uid || platformAdmin());
 
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && activeDriver();
+
+      allow delete: if platformAdmin();
+    }
+
+    // BROKER PROFILES
+    match /brokers/{uid} {
+      allow read: if signedIn()
+        && (request.auth.uid == uid || platformAdmin());
+
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && activePoster();
+
+      allow delete: if platformAdmin();
+    }
+
+    // VEHICLES
+    match /vehicles/{vehicleId} {
+      allow create: if activeDriver()
+        && request.resource.data.driverUid == request.auth.uid;
+
+      allow read: if signedIn()
+        && (resource.data.driverUid == request.auth.uid || platformAdmin());
+
+      allow update: if signedIn()
+        && resource.data.driverUid == request.auth.uid
+        && request.resource.data.driverUid == resource.data.driverUid;
+
+      allow delete: if signedIn()
+        && (resource.data.driverUid == request.auth.uid || platformAdmin());
+    }
+
+    // TRIP POSTS
     match /tripPosts/{tripId} {
 
-      // Available trips are visible to everyone.
-      // Other trip records are visible only to their owner
-      // and administrators.
-      allow get, list: if (
-        resource.data.status == 'available'
-      ) || (
-        signedIn()
-        && resource.data.posterUid == request.auth.uid
-      ) || isAdminOrSuperAdmin();
+      allow get, list: if signedIn()
+        && (
+          resource.data.status == "available"
+          || resource.data.posterUid == request.auth.uid
+          || resource.data.assignedDriverUid == request.auth.uid
+          || platformAdmin()
+        );
 
-      // Approved drivers and brokers can publish trips.
-      allow create: if isApprovedPoster()
+      allow create: if activePoster()
         && request.resource.data.posterUid == request.auth.uid
-        && request.resource.data.posterRole == userRole(request.auth.uid)
-        && request.resource.data.status == 'available'
-        && request.resource.data.keys().hasOnly([
-          'routeFrom',
-          'routeTo',
-          'travelDate',
-          'travelTime',
-          'vehicleCategory',
-          'seats',
-          'fareType',
-          'fareAmount',
-          'notes',
-          'posterUid',
-          'posterName',
-          'posterRole',
-          'status',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.routeFrom is string
-        && request.resource.data.routeTo is string
+        && request.resource.data.status == "available"
+        && request.resource.data.source is string
+        && request.resource.data.destination is string
+        && request.resource.data.pickupLocation is string
         && request.resource.data.travelDate is string
-        && request.resource.data.travelTime is string
-        && request.resource.data.vehicleCategory is string
-        && request.resource.data.posterName is string
-        && request.resource.data.posterRole is string
-        && request.resource.data.fareType is string
-        && request.resource.data.notes is string
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.tripType is string
+        && request.resource.data.vehicleType is string
+        && request.resource.data.seats is int
+        && request.resource.data.seats >= 1
+        && request.resource.data.seats <= 30
+        && request.resource.data.fare is number
+        && request.resource.data.fare >= 0;
 
-      // Only the trip poster or administrator can update a trip.
-      allow update: if (
-        signedIn()
+      // ATOMIC TRIP ASSIGNMENT
+      allow update: if signedIn()
         && resource.data.posterUid == request.auth.uid
+        && resource.data.status == "available"
+        && request.resource.data.status == "assigned"
         && request.resource.data.posterUid == resource.data.posterUid
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
-            'routeFrom',
-            'routeTo',
-            'travelDate',
-            'travelTime',
-            'vehicleCategory',
-            'seats',
-            'fareType',
-            'fareAmount',
-            'notes',
-            'status',
-            'updatedAt'
+            "status",
+            "assignedDriverUid",
+            "assignedDriverName",
+            "assignedRequestId",
+            "driverCompleted",
+            "posterCompleted",
+            "driverPaymentConfirmed",
+            "posterPaymentConfirmed",
+            "paymentStatus",
+            "amountPaid",
+            "updatedAt"
           ])
-        && request.resource.data.status in [
-          'available',
-          'assigned',
-          'cancelled',
-          'closed'
-        ]
-        && request.resource.data.updatedAt == request.time
-      ) || isAdminOrSuperAdmin();
+        && getAfter(
+          /databases/$(database)/documents/tripRequests/$(request.resource.data.assignedRequestId)
+        ).data.status == "accepted"
+        && getAfter(
+          /databases/$(database)/documents/tripRequests/$(request.resource.data.assignedRequestId)
+        ).data.tripId == tripId
+        && getAfter(
+          /databases/$(database)/documents/tripRequests/$(request.resource.data.assignedRequestId)
+        ).data.driverUid == request.resource.data.assignedDriverUid
+        && getAfter(
+          /databases/$(database)/documents/tripRequests/$(request.resource.data.assignedRequestId)
+        ).data.tripPosterUid == request.auth.uid;
 
-      allow delete: if isSuperAdmin();
-    }
-
-    // =========================================
-    // 7. TRIP REQUESTS
-    // =========================================
-
-    match /tripRequests/{requestId} {
-
-      // The requesting driver, trip poster and admins
-      // can read an existing request.
-      //
-      // An authenticated user may also check a missing
-      // request document before creating it.
-      allow get: if signedIn()
+      // TWO-SIDED TRIP COMPLETION
+      allow update: if signedIn()
+        && resource.data.status == "assigned"
+        && request.resource.data.status in ["assigned", "completed"]
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "driverCompleted",
+            "posterCompleted",
+            "driverCompletedAt",
+            "posterCompletedAt",
+            "status",
+            "completedAt",
+            "updatedAt"
+          ])
         && (
-          !exists(
-            /databases/$(database)/documents/tripRequests/$(requestId)
+          (
+            request.auth.uid == resource.data.assignedDriverUid
+            && request.resource.data.driverCompleted == true
+            && request.resource.data.posterCompleted == resource.data.posterCompleted
           )
-          || resource.data.driverUid == request.auth.uid
-          || resource.data.tripPosterUid == request.auth.uid
-          || isAdminOrSuperAdmin()
-        );
-
-      // Queries must be limited to requests belonging
-      // to the requesting driver or trip poster.
-      allow list: if signedIn()
+          ||
+          (
+            request.auth.uid == resource.data.posterUid
+            && request.resource.data.posterCompleted == true
+            && request.resource.data.driverCompleted == resource.data.driverCompleted
+          )
+        )
         && (
-          resource.data.driverUid == request.auth.uid
-          || resource.data.tripPosterUid == request.auth.uid
-          || isAdminOrSuperAdmin()
+          request.resource.data.status != "completed"
+          || (
+            request.resource.data.driverCompleted == true
+            && request.resource.data.posterCompleted == true
+          )
         );
 
-      // Only approved drivers can request available trips.
-      allow create: if isApprovedDriver()
+      // POSTER RECORDS PAYMENT AMOUNT
+      allow update: if signedIn()
+        && resource.data.status == "completed"
+        && request.resource.data.status == "completed"
+        && request.resource.data.posterUid == request.auth.uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "amountPaid",
+            "paymentStatus",
+            "posterPaymentConfirmed",
+            "driverPaymentConfirmed",
+            "updatedAt"
+          ])
+        && request.resource.data.amountPaid is number
+        && request.resource.data.amountPaid >= resource.data.amountPaid
+        && request.resource.data.amountPaid <= resource.data.fare;
 
-        && request.resource.data.driverUid == request.auth.uid
-
-        && request.resource.data.status == 'pending'
-
-        && request.resource.data.keys().hasOnly([
-          'tripId',
-          'driverUid',
-          'driverName',
-          'driverPhone',
-          'tripPosterUid',
-          'status',
-          'message',
-          'createdAt'
-        ])
-
-        && request.resource.data.tripId is string
-        && request.resource.data.driverName is string
-        && request.resource.data.driverPhone is string
-        && request.resource.data.tripPosterUid is string
-        && request.resource.data.message is string
-
-        && request.resource.data.createdAt == request.time
-
-        && requestId == (
-          request.resource.data.tripId + '_' + request.auth.uid
+      // TWO-SIDED PAYMENT CONFIRMATION
+      allow update: if signedIn()
+        && resource.data.status == "completed"
+        && request.resource.data.status == "completed"
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "driverPaymentConfirmed",
+            "posterPaymentConfirmed",
+            "paymentStatus",
+            "paidAt",
+            "updatedAt"
+          ])
+        && (
+          (
+            request.auth.uid == resource.data.assignedDriverUid
+            && request.resource.data.driverPaymentConfirmed == true
+            && request.resource.data.posterPaymentConfirmed == resource.data.posterPaymentConfirmed
+          )
+          ||
+          (
+            request.auth.uid == resource.data.posterUid
+            && request.resource.data.posterPaymentConfirmed == true
+            && request.resource.data.driverPaymentConfirmed == resource.data.driverPaymentConfirmed
+          )
         )
+        && (
+          request.resource.data.paymentStatus != "paid"
+          || (
+            request.resource.data.driverPaymentConfirmed == true
+            && request.resource.data.posterPaymentConfirmed == true
+            && request.resource.data.amountPaid >= resource.data.fare
+          )
+        );
 
-        && exists(
-          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
-        )
-
-        && get(
-          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
-        ).data.status == 'available'
-
-        && get(
-          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
-        ).data.posterUid == request.resource.data.tripPosterUid
-
-        && request.resource.data.tripPosterUid != request.auth.uid;
-
-      // Acceptance and rejection will be added
-      // after the request submission test.
-      allow update: if isAdminOrSuperAdmin();
-
-      allow delete: if isSuperAdmin();
+      // SOFT ARCHIVE: no ordinary user can permanently delete trips.
+      allow delete: if superAdmin();
     }
 
-    // =========================================
-    // 8. FUTURE OUTSOURCING REQUESTS
-    // =========================================
-
-    match /outsourcingRequests/{requestId} {
-      allow read, write: if false;
-    }
-
-    // =========================================
-    // 9. OUTSOURCING AGREEMENTS
-    // =========================================
-
-    match /outsourcingAgreements/{agreementId} {
-      allow read, write: if false;
-    }
-
-    // =========================================
-    // 10. INVOICES
-    // =========================================
-
-    match /invoices/{invoiceId} {
+    // TRIP REQUESTS
+    match /tripRequests/{requestId} {
 
       allow get, list: if signedIn()
         && (
           resource.data.driverUid == request.auth.uid
-          || resource.data.customerUid == request.auth.uid
-          || isAdminOrSuperAdmin()
+          || resource.data.tripPosterUid == request.auth.uid
+          || platformAdmin()
         );
 
-      allow create: if isApprovedDriver()
-        && request.resource.data.driverUid == request.auth.uid;
+      allow create: if activeDriver()
+        && request.resource.data.driverUid == request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.tripId is string
+        && request.resource.data.tripPosterUid is string
+        && request.resource.data.tripPosterUid != request.auth.uid
+        && get(
+          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
+        ).data.status == "available"
+        && get(
+          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
+        ).data.posterUid == request.resource.data.tripPosterUid;
 
-      allow update, delete: if isAdminOrSuperAdmin();
+      allow update: if signedIn()
+        && resource.data.tripPosterUid == request.auth.uid
+        && resource.data.status == "pending"
+        && request.resource.data.status in ["accepted", "rejected"]
+        && request.resource.data.driverUid == resource.data.driverUid
+        && request.resource.data.tripId == resource.data.tripId
+        && request.resource.data.tripPosterUid == resource.data.tripPosterUid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(["status", "updatedAt"])
+        && (
+          request.resource.data.status == "rejected"
+          || (
+            getAfter(
+              /databases/$(database)/documents/tripPosts/$(resource.data.tripId)
+            ).data.status == "assigned"
+            && getAfter(
+              /databases/$(database)/documents/tripPosts/$(resource.data.tripId)
+            ).data.assignedRequestId == requestId
+            && getAfter(
+              /databases/$(database)/documents/tripPosts/$(resource.data.tripId)
+            ).data.assignedDriverUid == resource.data.driverUid
+          )
+        );
+
+      allow delete: if platformAdmin();
     }
 
-    // =========================================
-    // 11. PLATFORM SETTINGS
-    // =========================================
+    // CENTRAL NOTIFICATIONS
+    match /notifications/{notificationId} {
 
+      allow get, list: if signedIn()
+        && (
+          resource.data.recipientUid == request.auth.uid
+          || platformAdmin()
+        );
+
+      // Validate notification against the related trip request.
+      allow create: if signedIn()
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.recipientUid is string
+        && request.resource.data.tripId is string
+        && request.resource.data.requestId is string
+        && request.resource.data.read == false
+        && exists(
+          /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+        )
+        && get(
+          /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+        ).data.tripId == request.resource.data.tripId
+        && (
+          (
+            request.resource.data.type == "trip_request_submitted"
+            && request.resource.data.recipientUid == request.auth.uid
+            && get(
+              /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+            ).data.driverUid == request.auth.uid
+          )
+          ||
+          (
+            request.resource.data.type == "trip_request_received"
+            && get(
+              /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+            ).data.driverUid == request.auth.uid
+            && get(
+              /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+            ).data.tripPosterUid == request.resource.data.recipientUid
+            && get(
+              /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+            ).data.status == "pending"
+          )
+          ||
+          (
+            request.resource.data.type in [
+              "trip_request_accepted",
+              "trip_request_rejected"
+            ]
+            && get(
+              /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+            ).data.tripPosterUid == request.auth.uid
+            && get(
+              /databases/$(database)/documents/tripRequests/$(request.resource.data.requestId)
+            ).data.driverUid == request.resource.data.recipientUid
+          )
+        );
+
+      allow update: if signedIn()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(["read"])
+        && request.resource.data.read == true;
+
+      allow delete: if platformAdmin();
+    }
+
+    // INVOICES
+    match /invoices/{invoiceId} {
+      allow read: if signedIn()
+        && (
+          resource.data.customerUid == request.auth.uid
+          || resource.data.driverUid == request.auth.uid
+          || resource.data.posterUid == request.auth.uid
+          || platformAdmin()
+        );
+
+      allow create, update, delete: if platformAdmin();
+    }
+
+    // PLATFORM SETTINGS
     match /platformSettings/{settingId} {
-
-      allow read: if isAdminOrSuperAdmin();
-
-      allow write: if isSuperAdmin();
+      allow read: if signedIn();
+      allow write: if superAdmin();
     }
 
-    // =========================================
-    // 12. AUDIT LOGS
-    // =========================================
-
+    // AUDIT LOGS
     match /auditLogs/{logId} {
-
-      allow read: if isAdminOrSuperAdmin();
-
-      allow write: if false;
+      allow read, create: if platformAdmin();
+      allow update, delete: if superAdmin();
     }
 
-    // =========================================
-    // 13. DEFAULT DENY
-    // =========================================
-
+    // DENY ALL OTHER COLLECTIONS
     match /{document=**} {
       allow read, write: if false;
     }
