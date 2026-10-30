@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#102b46">
+  <meta name="description" content="Register for DarjeelingHost.">
+  <title>Register | DarjeelingHost</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="container navbar">
+    <a href="index.html" class="brand">
+      Darjeeling<span>Host</span>
+    </a>
+    <a href="index.html" class="btn btn-outline">Back to Home</a>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="form-container">
+
+    <h2 style="color:var(--primary);text-align:center;">
+      Create Your Account
+    </h2>
+
+    <p style="color:var(--muted);text-align:center;">
+      Join the DarjeelingHost network.
+    </p>
+
+    <form id="registerForm">
+
+      <div class="form-group">
+        <label for="fullName">Full Name *</label>
+        <input
+          type="text"
+          id="fullName"
+          name="fullName"
+          placeholder="Enter your full name"
+          autocomplete="name"
+          maxlength="100"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address *</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="Enter your email"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone Number *</label>
+        <input
+          type="tel"
+          id="phone"
+          name="phone"
+          placeholder="Enter your phone number"
+          autocomplete="tel"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="whatsapp">WhatsApp Number</label>
+        <input
+          type="tel"
+          id="whatsapp"
+          name="whatsapp"
+          placeholder="Enter your WhatsApp number"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="role">Account Type *</label>
+        <select id="role" name="role" required>
+          <option value="">Select account type</option>
+          <option value="driver">Driver</option>
+          <option value="broker">Travel Agent / Broker</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Create Password *</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          placeholder="Minimum 8 characters"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password *</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          placeholder="Enter password again"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label style="display:flex;align-items:flex-start;gap:10px;font-weight:400;">
+          <input
+            type="checkbox"
+            id="terms"
+            required
+            style="width:auto;margin-top:4px;"
+          >
+          <span>
+            I agree to the platform's terms and conditions.
+          </span>
+        </label>
+      </div>
+
+      <p id="registerMessage" role="status" aria-live="polite"></p>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;">
+        Create Account
+      </button>
+
+    </form>
+
+    <p style="text-align:center;margin-top:22px;font-size:14px;">
+      Already registered?
+      <a href="login.html"
+         style="color:var(--secondary);font-weight:bold;">
+        Login here
+      </a>
+    </p>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container footer-content">
+    <strong>DarjeelingHost</strong>
+    <p>© <span id="year"></span> DarjeelingHost</p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("year").textContent =
+    new Date().getFullYear();
+
+  const form = document.getElementById("registerForm");
+  const message = document.getElementById("registerMessage");
+
+  form.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const password =
+      document.getElementById("password").value;
+
+    const confirmPassword =
+      document.getElementById("confirmPassword").value;
+
+    if (password !== confirmPassword) {
+      message.style.color = "#c0392b";
+      message.textContent = "Passwords do not match.";
+      return;
+    }
+
+    message.style.color = "#1769aa";
+    message.textContent =
+      "Registration interface is ready. Firebase registration will be connected in the next development stage.";
+  });
+</script>
+
+</body>
+</html>
