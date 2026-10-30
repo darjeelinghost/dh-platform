@@ -4,9 +4,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =====================================
-    // 1. AUTHENTICATION
-    // =====================================
+    // =========================================
+    // 1. AUTHENTICATION HELPERS
+    // =========================================
 
     function signedIn() {
       return request.auth != null;
@@ -26,34 +26,57 @@ service cloud.firestore {
         && request.auth.token.superAdmin == true;
     }
 
-    function isPlatformAdmin() {
+    function isAdminOrSuperAdmin() {
       return isAdmin() || isSuperAdmin();
     }
 
-    function isDriver(uid) {
-      return signedIn()
-        && request.auth.uid == uid
-        && get(
-          /databases/$(database)/documents/users/$(uid)
-        ).data.role == 'driver';
+    function userExists(uid) {
+      return exists(
+        /databases/$(database)/documents/users/$(uid)
+      );
     }
 
-    // =====================================
-    // 2. USER ACCOUNTS
-    // =====================================
+    function userRole(uid) {
+      return get(
+        /databases/$(database)/documents/users/$(uid)
+      ).data.role;
+    }
+
+    function userStatus(uid) {
+      return get(
+        /databases/$(database)/documents/users/$(uid)
+      ).data.status;
+    }
+
+    function isDriverAccount(uid) {
+      return userExists(uid)
+        && userRole(uid) == 'driver';
+    }
+
+    function isApprovedDriver() {
+      return signedIn()
+        && isDriverAccount(request.auth.uid)
+        && userStatus(request.auth.uid) == 'active';
+    }
+
+    function isApprovedPoster() {
+      return signedIn()
+        && userExists(request.auth.uid)
+        && userRole(request.auth.uid) in ['driver', 'broker']
+        && userStatus(request.auth.uid) == 'active';
+    }
+
+    // =========================================
+    // 2. USER PROFILES
+    // =========================================
 
     match /users/{uid} {
 
-      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow get: if isOwner(uid) || isAdminOrSuperAdmin();
+
+      allow list: if isAdminOrSuperAdmin();
 
       allow create: if isOwner(uid)
-        && request.resource.data.keys().hasAll([
-          'email',
-          'role',
-          'status',
-          'createdAt',
-          'updatedAt'
-        ])
         && request.resource.data.keys().hasOnly([
           'name',
           'email',
@@ -65,28 +88,59 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
+        && request.resource.data.name is string
         && request.resource.data.email is string
         && request.resource.data.role in [
           'driver',
           'customer',
           'broker'
         ]
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time
         && (
+          (
+            request.resource.data.role in ['driver', 'broker']
+            && request.resource.data.status == 'pending'
+          )
+          ||
           (
             request.resource.data.role == 'customer'
             && request.resource.data.status == 'active'
           )
-          ||
-          (
-            request.resource.data.role in [
-              'driver',
-              'broker'
-            ]
-            && request.resource.data.status == 'pending'
-          )
-        );
+        )
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Users cannot change their own role or approval status.
+      allow update: if (
+        isOwner(uid)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'name',
+            'email',
+            'phone',
+            'whatsapp',
+            'photoURL',
+            'updatedAt'
+          ])
+        && request.resource.data.updatedAt == request.time
+      ) || isAdminOrSuperAdmin();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================
+    // 3. DRIVER PROFILES
+    // =========================================
+
+    match /drivers/{uid} {
+
+      allow get: if isOwner(uid) || isAdminOrSuperAdmin();
+
+      allow list: if isAdminOrSuperAdmin();
+
+      allow create: if isOwner(uid)
+        && isDriverAccount(uid)
+        && request.resource.data.verificationStatus == 'pending';
 
       allow update: if (
         isOwner(uid)
@@ -96,94 +150,75 @@ service cloud.firestore {
             'name',
             'phone',
             'whatsapp',
+            'address',
             'photoURL',
             'updatedAt'
           ])
-      ) || isPlatformAdmin();
+      ) || isAdminOrSuperAdmin();
 
       allow delete: if isSuperAdmin();
     }
 
-    // =====================================
-    // 3. DRIVER PROFILES
-    // =====================================
+    // =========================================
+    // 4. BROKER / TRAVEL AGENT PROFILES
+    // =========================================
 
-    match /drivers/{uid} {
+    match /brokers/{uid} {
 
-      allow read: if isOwner(uid) || isPlatformAdmin();
+      allow get: if isOwner(uid) || isAdminOrSuperAdmin();
 
-      allow create: if isDriver(uid)
-        && request.resource.data.keys().hasAll([
-          'verificationStatus',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'name',
-          'email',
-          'phone',
-          'whatsapp',
-          'address',
-          'licenseNumber',
-          'vehicleDetails',
-          'verificationStatus',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.verificationStatus == 'pending'
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+      allow list: if isAdminOrSuperAdmin();
+
+      allow create: if isOwner(uid)
+        && userExists(uid)
+        && userRole(uid) == 'broker';
 
       allow update: if (
         isOwner(uid)
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
+            'name',
             'phone',
             'whatsapp',
+            'businessName',
             'address',
-            'vehicleDetails',
             'updatedAt'
           ])
-      ) || isPlatformAdmin();
+      ) || isAdminOrSuperAdmin();
 
       allow delete: if isSuperAdmin();
     }
 
-    // =====================================
-    // 4. VEHICLES
-    // =====================================
+    // =========================================
+    // 5. VEHICLES
+    // =========================================
 
     match /vehicles/{vehicleId} {
 
-      // Private vehicle records
-      allow read: if (
-        signedIn()
-        && resource.data.ownerUid == request.auth.uid
-      ) || isPlatformAdmin();
+      allow get: if signedIn()
+        && (
+          resource.data.ownerUid == request.auth.uid
+          || isAdminOrSuperAdmin()
+        );
 
-      // Driver creates a vehicle under their UID
-      allow create: if isDriver(
-          request.resource.data.ownerUid
-        )
-        && request.resource.data.keys().hasAll([
-          'ownerUid',
-          'registrationNumber',
-          'vehicleCategory',
-          'vehicleModel',
-          'seatingCapacity',
-          'isPrimary',
-          'verificationStatus',
-          'vehicleStatus',
-          'createdAt',
-          'updatedAt'
-        ])
+      allow list: if signedIn()
+        && (
+          resource.data.ownerUid == request.auth.uid
+          || isAdminOrSuperAdmin()
+        );
+
+      // Pending drivers may register their vehicles.
+      // Approval is required before posting or requesting trips.
+      allow create: if signedIn()
+        && isDriverAccount(request.auth.uid)
+        && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.keys().hasOnly([
           'ownerUid',
           'registrationNumber',
-          'vehicleCategory',
-          'vehicleModel',
-          'seatingCapacity',
+          'category',
+          'model',
+          'seats',
           'fuelType',
           'isPrimary',
           'verificationStatus',
@@ -191,99 +226,255 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.registrationNumber is string
-        && request.resource.data.vehicleCategory is string
-        && request.resource.data.vehicleModel is string
-        && request.resource.data.seatingCapacity is int
-        && request.resource.data.seatingCapacity > 0
-        && request.resource.data.isPrimary is bool
         && request.resource.data.verificationStatus == 'pending'
         && request.resource.data.vehicleStatus == 'active'
+        && request.resource.data.seats is int
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
-      // Owner can edit ordinary vehicle details.
-      // Ownership and verification cannot be changed.
       allow update: if (
         signedIn()
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == resource.data.ownerUid
-        && request.resource.data.verificationStatus ==
-           resource.data.verificationStatus
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
             'registrationNumber',
-            'vehicleCategory',
-            'vehicleModel',
-            'seatingCapacity',
+            'category',
+            'model',
+            'seats',
             'fuelType',
             'isPrimary',
             'updatedAt'
           ])
-      ) || isPlatformAdmin();
+      ) || isAdminOrSuperAdmin();
 
       allow delete: if isSuperAdmin();
     }
 
-    // =====================================
-    // 5. BROKER PROFILES
-    // =====================================
+    // =========================================
+    // 6. COMMON OUTSOURCING TRIP POSTS
+    // =========================================
 
-    match /brokers/{uid} {
+    match /tripPosts/{tripId} {
 
-      allow read: if isOwner(uid) || isPlatformAdmin();
+      // Available trips are visible to everyone.
+      // Other trip records are visible only to their owner
+      // and administrators.
+      allow get, list: if (
+        resource.data.status == 'available'
+      ) || (
+        signedIn()
+        && resource.data.posterUid == request.auth.uid
+      ) || isAdminOrSuperAdmin();
 
-      allow create: if isOwner(uid)
-        && request.resource.data.keys().hasAll([
-          'approvalStatus',
-          'createdAt',
-          'updatedAt'
-        ])
+      // Approved drivers and brokers can publish trips.
+      allow create: if isApprovedPoster()
+        && request.resource.data.posterUid == request.auth.uid
+        && request.resource.data.posterRole == userRole(request.auth.uid)
+        && request.resource.data.status == 'available'
         && request.resource.data.keys().hasOnly([
-          'name',
-          'email',
-          'phone',
-          'whatsapp',
-          'address',
-          'approvalStatus',
+          'routeFrom',
+          'routeTo',
+          'travelDate',
+          'travelTime',
+          'vehicleCategory',
+          'seats',
+          'fareType',
+          'fareAmount',
+          'notes',
+          'posterUid',
+          'posterName',
+          'posterRole',
+          'status',
           'createdAt',
           'updatedAt'
         ])
-        && request.resource.data.approvalStatus == 'pending'
+        && request.resource.data.routeFrom is string
+        && request.resource.data.routeTo is string
+        && request.resource.data.travelDate is string
+        && request.resource.data.travelTime is string
+        && request.resource.data.vehicleCategory is string
+        && request.resource.data.posterName is string
+        && request.resource.data.posterRole is string
+        && request.resource.data.fareType is string
+        && request.resource.data.notes is string
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
+      // Only the trip poster or administrator can update a trip.
       allow update: if (
-        isOwner(uid)
+        signedIn()
+        && resource.data.posterUid == request.auth.uid
+        && request.resource.data.posterUid == resource.data.posterUid
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
-            'phone',
-            'whatsapp',
-            'address',
+            'routeFrom',
+            'routeTo',
+            'travelDate',
+            'travelTime',
+            'vehicleCategory',
+            'seats',
+            'fareType',
+            'fareAmount',
+            'notes',
+            'status',
             'updatedAt'
           ])
-      ) || isPlatformAdmin();
+        && request.resource.data.status in [
+          'available',
+          'assigned',
+          'cancelled',
+          'closed'
+        ]
+        && request.resource.data.updatedAt == request.time
+      ) || isAdminOrSuperAdmin();
 
       allow delete: if isSuperAdmin();
     }
 
-    // =====================================
-    // 6. PLATFORM SETTINGS
-    // =====================================
+    // =========================================
+    // 7. TRIP REQUESTS
+    // =========================================
 
-    match /platformSettings/{documentId} {
+    match /tripRequests/{requestId} {
 
-      allow read: if isPlatformAdmin();
+      // The requesting driver, trip poster and admins
+      // can read an existing request.
+      //
+      // An authenticated user may also check a missing
+      // request document before creating it.
+      allow get: if signedIn()
+        && (
+          !exists(
+            /databases/$(database)/documents/tripRequests/$(requestId)
+          )
+          || resource.data.driverUid == request.auth.uid
+          || resource.data.tripPosterUid == request.auth.uid
+          || isAdminOrSuperAdmin()
+        );
+
+      // Queries must be limited to requests belonging
+      // to the requesting driver or trip poster.
+      allow list: if signedIn()
+        && (
+          resource.data.driverUid == request.auth.uid
+          || resource.data.tripPosterUid == request.auth.uid
+          || isAdminOrSuperAdmin()
+        );
+
+      // Only approved drivers can request available trips.
+      allow create: if isApprovedDriver()
+
+        && request.resource.data.driverUid == request.auth.uid
+
+        && request.resource.data.status == 'pending'
+
+        && request.resource.data.keys().hasOnly([
+          'tripId',
+          'driverUid',
+          'driverName',
+          'driverPhone',
+          'tripPosterUid',
+          'status',
+          'message',
+          'createdAt'
+        ])
+
+        && request.resource.data.tripId is string
+        && request.resource.data.driverName is string
+        && request.resource.data.driverPhone is string
+        && request.resource.data.tripPosterUid is string
+        && request.resource.data.message is string
+
+        && request.resource.data.createdAt == request.time
+
+        && requestId == (
+          request.resource.data.tripId + '_' + request.auth.uid
+        )
+
+        && exists(
+          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
+        )
+
+        && get(
+          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
+        ).data.status == 'available'
+
+        && get(
+          /databases/$(database)/documents/tripPosts/$(request.resource.data.tripId)
+        ).data.posterUid == request.resource.data.tripPosterUid
+
+        && request.resource.data.tripPosterUid != request.auth.uid;
+
+      // Acceptance and rejection will be added
+      // after the request submission test.
+      allow update: if isAdminOrSuperAdmin();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================
+    // 8. FUTURE OUTSOURCING REQUESTS
+    // =========================================
+
+    match /outsourcingRequests/{requestId} {
+      allow read, write: if false;
+    }
+
+    // =========================================
+    // 9. OUTSOURCING AGREEMENTS
+    // =========================================
+
+    match /outsourcingAgreements/{agreementId} {
+      allow read, write: if false;
+    }
+
+    // =========================================
+    // 10. INVOICES
+    // =========================================
+
+    match /invoices/{invoiceId} {
+
+      allow get, list: if signedIn()
+        && (
+          resource.data.driverUid == request.auth.uid
+          || resource.data.customerUid == request.auth.uid
+          || isAdminOrSuperAdmin()
+        );
+
+      allow create: if isApprovedDriver()
+        && request.resource.data.driverUid == request.auth.uid;
+
+      allow update, delete: if isAdminOrSuperAdmin();
+    }
+
+    // =========================================
+    // 11. PLATFORM SETTINGS
+    // =========================================
+
+    match /platformSettings/{settingId} {
+
+      allow read: if isAdminOrSuperAdmin();
 
       allow write: if isSuperAdmin();
     }
 
-    // =====================================
-    // 7. DEFAULT DENY
-    // =====================================
+    // =========================================
+    // 12. AUDIT LOGS
+    // =========================================
+
+    match /auditLogs/{logId} {
+
+      allow read: if isAdminOrSuperAdmin();
+
+      allow write: if false;
+    }
+
+    // =========================================
+    // 13. DEFAULT DENY
+    // =========================================
 
     match /{document=**} {
       allow read, write: if false;
