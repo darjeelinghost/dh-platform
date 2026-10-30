@@ -5,7 +5,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // =====================================
-    // 1. AUTHENTICATION & ROLE FUNCTIONS
+    // 1. AUTHENTICATION
     // =====================================
 
     function signedIn() {
@@ -28,6 +28,14 @@ service cloud.firestore {
 
     function isPlatformAdmin() {
       return isAdmin() || isSuperAdmin();
+    }
+
+    function isDriver(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && get(
+          /databases/$(database)/documents/users/$(uid)
+        ).data.role == 'driver';
     }
 
     // =====================================
@@ -104,7 +112,7 @@ service cloud.firestore {
 
       allow read: if isOwner(uid) || isPlatformAdmin();
 
-      allow create: if isOwner(uid)
+      allow create: if isDriver(uid)
         && request.resource.data.keys().hasAll([
           'verificationStatus',
           'createdAt',
@@ -143,7 +151,84 @@ service cloud.firestore {
     }
 
     // =====================================
-    // 4. BROKER PROFILES
+    // 4. VEHICLES
+    // =====================================
+
+    match /vehicles/{vehicleId} {
+
+      // Private vehicle records
+      allow read: if (
+        signedIn()
+        && resource.data.ownerUid == request.auth.uid
+      ) || isPlatformAdmin();
+
+      // Driver creates a vehicle under their UID
+      allow create: if isDriver(
+          request.resource.data.ownerUid
+        )
+        && request.resource.data.keys().hasAll([
+          'ownerUid',
+          'registrationNumber',
+          'vehicleCategory',
+          'vehicleModel',
+          'seatingCapacity',
+          'isPrimary',
+          'verificationStatus',
+          'vehicleStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'ownerUid',
+          'registrationNumber',
+          'vehicleCategory',
+          'vehicleModel',
+          'seatingCapacity',
+          'fuelType',
+          'isPrimary',
+          'verificationStatus',
+          'vehicleStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.registrationNumber is string
+        && request.resource.data.vehicleCategory is string
+        && request.resource.data.vehicleModel is string
+        && request.resource.data.seatingCapacity is int
+        && request.resource.data.seatingCapacity > 0
+        && request.resource.data.isPrimary is bool
+        && request.resource.data.verificationStatus == 'pending'
+        && request.resource.data.vehicleStatus == 'active'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Owner can edit ordinary vehicle details.
+      // Ownership and verification cannot be changed.
+      allow update: if (
+        signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.verificationStatus ==
+           resource.data.verificationStatus
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'registrationNumber',
+            'vehicleCategory',
+            'vehicleModel',
+            'seatingCapacity',
+            'fuelType',
+            'isPrimary',
+            'updatedAt'
+          ])
+      ) || isPlatformAdmin();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =====================================
+    // 5. BROKER PROFILES
     // =====================================
 
     match /brokers/{uid} {
@@ -186,7 +271,7 @@ service cloud.firestore {
     }
 
     // =====================================
-    // 5. PLATFORM SETTINGS
+    // 6. PLATFORM SETTINGS
     // =====================================
 
     match /platformSettings/{documentId} {
@@ -197,7 +282,7 @@ service cloud.firestore {
     }
 
     // =====================================
-    // 6. DEFAULT DENY
+    // 7. DEFAULT DENY
     // =====================================
 
     match /{document=**} {
