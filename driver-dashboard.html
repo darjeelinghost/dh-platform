@@ -2,178 +2,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Driver Dashboard | DarjeelingHost</title>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 650px;
-      margin: 30px auto;
-    }
-
-    .card {
-      background: white;
-      padding: 22px;
-      margin-bottom: 16px;
-      border-radius: 12px;
-    }
-
-    h2 { margin-top: 0; }
-
-    .status {
-      padding: 12px;
-      border-radius: 7px;
-      background: #fff3cd;
-      color: #765500;
-      font-weight: bold;
-    }
-
-    .locked {
-      color: #777;
-      background: #eee;
-      padding: 15px;
-      border-radius: 7px;
-    }
-
-    button {
-      padding: 12px 20px;
-      border: none;
-      border-radius: 6px;
-      background: #172b4d;
-      color: white;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Dashboard | DarjeelingHost</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+  padding: 20px;
+  color: #172b4d;
+}
+.container {
+  max-width: 650px;
+  margin: 25px auto;
+}
+.card {
+  background: white;
+  padding: 22px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+}
+.status {
+  padding: 13px;
+  background: #fff3cd;
+  color: #765500;
+  border-radius: 7px;
+  font-weight: bold;
+}
+.locked {
+  background: #eee;
+  padding: 15px;
+  border-radius: 7px;
+}
+button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #172b4d;
+  color: white;
+  cursor: pointer;
+}
+.detail {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+</style>
 </head>
-
 <body>
 
 <div class="container">
 
-  <div class="card">
-    <h2>DarjeelingHost Driver Portal</h2>
-    <p id="welcome">Loading your account...</p>
-    <button id="logoutButton">Logout</button>
-  </div>
+<div class="card">
+<h2>DarjeelingHost Driver Portal</h2>
+<p id="welcome">Loading account...</p>
+<button id="logoutButton">Logout</button>
+</div>
 
-  <div class="card">
-    <h3>Application Status</h3>
-    <div id="applicationStatus" class="status">
-      Checking verification...
-    </div>
-    <p id="applicationDetails"></p>
-  </div>
+<div class="card">
+<h3>My Driver Application</h3>
 
-  <div class="card">
-    <h3>Driver Operations</h3>
+<div id="applicationStatus" class="status">
+Checking verification...
+</div>
 
-    <div id="lockedOperations" class="locked">
-      <strong>Access restricted</strong>
-      <p>
-        Your driver account must be verified before you can
-        receive enquiries, accept allocations or manage trips.
-      </p>
-    </div>
+<div id="details"></div>
+</div>
 
-    <div id="approvedOperations" hidden>
-      <p>Your driver application is approved.</p>
-      <p>Operational services can be enabled after the required
-      Firebase permissions have been configured.</p>
-    </div>
-  </div>
+<div class="card">
+<h3>Driver Operations</h3>
 
+<div id="lockedOperations" class="locked">
+<strong>Access restricted</strong>
+<p>
+Your application must be verified before you can
+receive enquiries, accept allocations or manage trips.
+</p>
+</div>
+
+<div id="approvedOperations" hidden>
+<strong>Verification approved</strong>
+<p>
+Your driver identity has been verified.
+Operational permissions must also be enabled by Firebase.
+</p>
+</div>
+
+</div>
 </div>
 
 <script type="module">
-  import {
-    auth,
-    observeAuth,
-    getDriverApplication,
-    logoutUser
-  } from "./firebase.js";
+import {
+  observeAuth,
+  getDriverApplication,
+  logoutUser
+} from "./firebase.js";
 
-  const welcome = document.getElementById("welcome");
-  const statusBox = document.getElementById("applicationStatus");
-  const details = document.getElementById("applicationDetails");
-  const locked = document.getElementById("lockedOperations");
-  const approved = document.getElementById("approvedOperations");
+const welcome = document.getElementById("welcome");
+const statusBox = document.getElementById("applicationStatus");
+const details = document.getElementById("details");
+const locked = document.getElementById("lockedOperations");
+const approved = document.getElementById("approvedOperations");
 
-  let loadingApplication = false;
+observeAuth(async (user) => {
+  if (!user) {
+    window.location.replace("driver-login.html");
+    return;
+  }
 
-  observeAuth(async (user) => {
-    if (!user) {
-      window.location.replace("driver-login.html");
+  welcome.textContent = "Welcome, " + user.email;
+
+  try {
+    const application = await getDriverApplication(user.uid);
+
+    if (!application) {
+      statusBox.textContent = "Application not found";
+      details.textContent = "Please contact support.";
       return;
     }
 
-    if (loadingApplication) return;
-    loadingApplication = true;
+    details.innerHTML = "";
 
-    welcome.textContent = "Welcome, " + (user.email || "Driver");
+    const fields = [
+      ["Name", application.name],
+      ["Email", application.email],
+      ["Phone", application.phone],
+      ["WhatsApp", application.whatsappNumber],
+      ["Address", application.address],
+      ["Licence Number", application.licenceNumber],
+      ["Vehicle Type", application.vehicleType],
+      ["Vehicle Number", application.vehicleNumber]
+    ];
 
-    try {
-      const application = await getDriverApplication(user.uid);
-
-      if (!application) {
-        statusBox.textContent = "Application not found";
-        details.textContent =
-          "Please contact support about your registration.";
-        return;
-      }
-
-      details.textContent = "Applicant: " + application.name;
-
-      if (
-        application.status === "approved" &&
-        application.verificationStatus === "approved" &&
-        (await user.getIdTokenResult(true)).claims.driver === true
-      ) {
-        statusBox.textContent = "Verified and approved";
-        statusBox.style.background = "#d1e7dd";
-        statusBox.style.color = "#0f5132";
-
-        locked.hidden = true;
-        approved.hidden = false;
-
-      } else if (
-        application.verificationStatus === "rejected"
-      ) {
-        statusBox.textContent = "Application rejected";
-        statusBox.style.background = "#f8d7da";
-        statusBox.style.color = "#842029";
-
-        locked.hidden = false;
-        locked.textContent =
-          "Operational access is unavailable. Please contact support.";
-
-      } else {
-        statusBox.textContent = "Pending verification";
-        locked.hidden = false;
-        approved.hidden = true;
-      }
-
-    } catch (error) {
-      console.error(error);
-      statusBox.textContent = "Unable to load application";
-      details.textContent = "Please refresh or try again later.";
-    } finally {
-      loadingApplication = false;
-    }
-  });
-
-  document.getElementById("logoutButton")
-    .addEventListener("click", async () => {
-      await logoutUser();
-      window.location.replace("driver-login.html");
+    fields.forEach(([label, value]) => {
+      const row = document.createElement("p");
+      row.className = "detail";
+      const strong = document.createElement("strong");
+      strong.textContent = label + ": ";
+      row.append(strong, document.createTextNode(value || "Not provided"));
+      details.appendChild(row);
     });
+
+    const token = await user.getIdTokenResult(true);
+    const verified =
+      application.status === "approved" &&
+      application.verificationStatus === "approved" &&
+      token.claims.driver === true;
+
+    if (verified) {
+      statusBox.textContent = "Verified and approved";
+      statusBox.style.background = "#d1e7dd";
+      statusBox.style.color = "#0f5132";
+      locked.hidden = true;
+      approved.hidden = false;
+
+    } else if (application.verificationStatus === "rejected") {
+      statusBox.textContent = "Application rejected";
+      statusBox.style.background = "#f8d7da";
+      statusBox.style.color = "#842029";
+      locked.hidden = false;
+      approved.hidden = true;
+
+    } else {
+      statusBox.textContent = "Pending verification";
+      locked.hidden = false;
+      approved.hidden = true;
+    }
+
+  } catch (error) {
+    console.error(error);
+    statusBox.textContent = "Unable to load application";
+    details.textContent = "Please try again later.";
+  }
+});
+
+document.getElementById("logoutButton")
+.addEventListener("click", async () => {
+  await logoutUser();
+  window.location.replace("driver-login.html");
+});
 </script>
 
 </body>
