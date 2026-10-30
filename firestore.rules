@@ -13,18 +13,18 @@ service cloud.firestore {
 
     function isOwner() {
       return signedIn()
-        && request.auth.token.owner == true;
+        && request.auth.token.get('owner', false) == true;
     }
 
     function isSuperAdmin() {
       return signedIn()
-        && request.auth.token.superAdmin == true;
+        && request.auth.token.get('superAdmin', false) == true;
     }
 
     function isAdmin() {
       return signedIn()
         && (
-          request.auth.token.admin == true
+          request.auth.token.get('admin', false) == true
           || isSuperAdmin()
           || isOwner()
         );
@@ -33,6 +33,12 @@ service cloud.firestore {
     function isSelf(uid) {
       return signedIn()
         && request.auth.uid == uid;
+    }
+
+    function isValidString(val, min, max) {
+      return val is string
+        && val.size() >= min
+        && val.size() <= max;
     }
 
     // =========================
@@ -47,6 +53,14 @@ service cloud.firestore {
         && request.resource.data.uid == uid
         && request.resource.data.role == "customer"
         && request.resource.data.status == "active"
+        && request.resource.data.keys().hasAll([
+          "uid",
+          "email",
+          "displayName",
+          "role",
+          "status",
+          "createdAt"
+        ])
         && request.resource.data.keys().hasOnly([
           "uid",
           "email",
@@ -54,7 +68,10 @@ service cloud.firestore {
           "role",
           "status",
           "createdAt"
-        ]);
+        ])
+        && isValidString(request.resource.data.email, 3, 254)
+        && isValidString(request.resource.data.displayName, 1, 100)
+        && request.resource.data.createdAt is timestamp;
 
       allow update: if isSelf(uid)
         && request.resource.data.diff(resource.data)
@@ -63,7 +80,10 @@ service cloud.firestore {
             "displayName",
             "phone",
             "photoURL"
-          ]);
+          ])
+        && (!("displayName" in request.resource.data) || isValidString(request.resource.data.displayName, 1, 100))
+        && (!("phone" in request.resource.data) || isValidString(request.resource.data.phone, 5, 20))
+        && (!("photoURL" in request.resource.data) || isValidString(request.resource.data.photoURL, 1, 500));
 
       allow delete: if isOwner();
     }
@@ -74,13 +94,10 @@ service cloud.firestore {
 
     match /driverApplications/{applicationId} {
 
-      // Driver can create only their own application.
-      allow create: if signedIn()
-        && applicationId == request.auth.uid
+      allow create: if isSelf(applicationId)
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.status == "submitted"
         && request.resource.data.verificationStatus == "pending"
-
         && request.resource.data.keys().hasAll([
           "userId",
           "name",
@@ -95,7 +112,6 @@ service cloud.firestore {
           "verificationStatus",
           "createdAt"
         ])
-
         && request.resource.data.keys().hasOnly([
           "userId",
           "name",
@@ -110,26 +126,19 @@ service cloud.firestore {
           "verificationStatus",
           "createdAt"
         ])
+        && isValidString(request.resource.data.name, 2, 100)
+        && isValidString(request.resource.data.email, 3, 254)
+        && isValidString(request.resource.data.phone, 5, 20)
+        && isValidString(request.resource.data.whatsappNumber, 5, 20)
+        && isValidString(request.resource.data.address, 5, 500)
+        && isValidString(request.resource.data.licenceNumber, 3, 50)
+        && isValidString(request.resource.data.vehicleType, 2, 50)
+        && isValidString(request.resource.data.vehicleNumber, 3, 30)
+        && request.resource.data.createdAt is timestamp;
 
-        && request.resource.data.name is string
-        && request.resource.data.email is string
-        && request.resource.data.phone is string
-        && request.resource.data.whatsappNumber is string
-        && request.resource.data.address is string
-        && request.resource.data.licenceNumber is string
-        && request.resource.data.vehicleType is string
-        && request.resource.data.vehicleNumber is string
-        && request.resource.data.createdAt == request.time;
+      // Using isSelf(applicationId) allows the user to check if their application doc existseven when null
+      allow read: if isSelf(applicationId) || isAdmin();
 
-      // Driver can read only their own application.
-      // Admin access requires Firebase custom claims.
-      allow read: if signedIn()
-        && (
-          resource.data.userId == request.auth.uid
-          || isAdmin()
-        );
-
-      // No direct client-side approval or editing.
       allow update, delete: if false;
     }
 
@@ -138,10 +147,7 @@ service cloud.firestore {
     // =========================
 
     match /drivers/{driverId} {
-
       allow read: if isSelf(driverId) || isAdmin();
-
-      // Only trusted backend can write.
       allow write: if false;
     }
 
@@ -150,13 +156,11 @@ service cloud.firestore {
     // =========================
 
     match /vehicles/{vehicleId} {
-
       allow read: if signedIn()
         && (
           resource.data.driverId == request.auth.uid
           || isAdmin()
         );
-
       allow write: if false;
     }
 
@@ -168,15 +172,19 @@ service cloud.firestore {
 
       allow create: if signedIn()
         && request.resource.data.customerId == request.auth.uid
-        && request.resource.data.status == "submitted";
+        && request.resource.data.status == "submitted"
+        && request.resource.data.createdAt is timestamp
+        // Prevent clients from pre-assigning drivers or brokers upon creation
+        && !("assignedBrokerId" in request.resource.data)
+        && !("assignedDriverId" in request.resource.data);
 
       allow read: if signedIn()
         && (
           resource.data.customerId == request.auth.uid
-          || resource.data.assignedBrokerId == request.auth.uid
+          || resource.data.get('assignedBrokerId', '') == request.auth.uid
           || (
-            request.auth.token.driver == true
-            && resource.data.assignedDriverId == request.auth.uid
+            request.auth.token.get('driver', false) == true
+            && resource.data.get('assignedDriverId', '') == request.auth.uid
           )
           || isAdmin()
         );
@@ -189,15 +197,13 @@ service cloud.firestore {
     // =========================
 
     match /allocations/{allocationId} {
-
       allow read: if signedIn()
         && (
           resource.data.customerId == request.auth.uid
-          || resource.data.driverId == request.auth.uid
-          || resource.data.brokerId == request.auth.uid
+          || resource.data.get('driverId', '') == request.auth.uid
+          || resource.data.get('brokerId', '') == request.auth.uid
           || isAdmin()
         );
-
       allow write: if false;
     }
 
@@ -206,15 +212,13 @@ service cloud.firestore {
     // =========================
 
     match /trips/{tripId} {
-
       allow read: if signedIn()
         && (
           resource.data.customerId == request.auth.uid
-          || resource.data.driverId == request.auth.uid
-          || resource.data.brokerId == request.auth.uid
+          || resource.data.get('driverId', '') == request.auth.uid
+          || resource.data.get('brokerId', '') == request.auth.uid
           || isAdmin()
         );
-
       allow write: if false;
     }
 
@@ -223,9 +227,7 @@ service cloud.firestore {
     // =========================
 
     match /brokers/{brokerId} {
-
       allow read: if isSelf(brokerId) || isAdmin();
-
       allow write: if false;
     }
 
@@ -234,7 +236,6 @@ service cloud.firestore {
     // =========================
 
     match /privateDriverDocuments/{documentId} {
-
       allow read, write: if false;
     }
 
@@ -243,9 +244,7 @@ service cloud.firestore {
     // =========================
 
     match /auditLogs/{logId} {
-
       allow read: if isOwner() || isSuperAdmin();
-
       allow write: if false;
     }
 
@@ -254,19 +253,8 @@ service cloud.firestore {
     // =========================
 
     match /platformSettings/{settingId} {
-
       allow read: if isAdmin();
-
       allow write: if isOwner();
     }
-
-    // =========================
-    // DEFAULT DENY
-    // =========================
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
   }
 }
