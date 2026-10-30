@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Registration | DarjeelingHost</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 440px;
+      margin: 30px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+    h2 { text-align: center; }
+    input, select, button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    button {
+      background: #172b4d;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #message {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    a { color: #172b4d; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Driver Registration</h2>
+  <p>Register with DarjeelingHost.</p>
+
+  <form id="registerForm">
+    <input name="name" placeholder="Full Name" required>
+    <input name="email" type="email" placeholder="Email Address" required>
+    <input name="phone" type="tel" placeholder="Phone Number" required>
+    <input name="address" placeholder="Residential Address" required>
+    <input name="licenceNumber" placeholder="Driving Licence Number" required>
+
+    <select name="vehicleType" required>
+      <option value="">Select Vehicle Type</option>
+      <option value="Hatchback">Hatchback</option>
+      <option value="Sedan">Sedan</option>
+      <option value="SUV">SUV</option>
+      <option value="MUV">MUV</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <input name="vehicleNumber" placeholder="Vehicle Registration Number" required>
+    <input name="password" type="password" placeholder="Create Password" minlength="8" required>
+    <input name="confirmPassword" type="password" placeholder="Confirm Password" minlength="8" required>
+
+    <button type="submit" id="submitButton">Register</button>
+  </form>
+
+  <p id="message" role="status"></p>
+
+  <p>Already registered? <a href="driver-login.html">Driver Login</a></p>
+</div>
+
+<script type="module">
+  import {
+    registerUser,
+    submitDriverApplication
+  } from "./firebase.js";
+
+  const form = document.getElementById("registerForm");
+  const message = document.getElementById("message");
+  const button = document.getElementById("submitButton");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    if (data.password !== data.confirmPassword) {
+      message.textContent = "Passwords do not match.";
+      return;
+    }
+
+    button.disabled = true;
+    message.textContent = "Creating your account...";
+
+    let user = null;
+
+    try {
+      const credential = await registerUser(
+        data.email.trim(),
+        data.password
+      );
+
+      user = credential.user;
+
+      message.textContent = "Submitting your application...";
+
+      await submitDriverApplication(user.uid, {
+        name: data.name.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        address: data.address.trim(),
+        licenceNumber: data.licenceNumber.trim(),
+        vehicleType: data.vehicleType,
+        vehicleNumber: data.vehicleNumber.trim()
+      });
+
+      message.textContent =
+        "Registration successful. Your application is pending verification.";
+
+      form.reset();
+
+    } catch (error) {
+      console.error(error);
+
+      if (user) {
+        message.textContent =
+          "Your account was created, but the application was not submitted. Please contact support before registering again.";
+      } else {
+        message.textContent =
+          error.code === "auth/email-already-in-use"
+            ? "This email is already registered. Please log in."
+            : error.message;
+      }
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
