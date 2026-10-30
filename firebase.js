@@ -1,4 +1,3 @@
-
 // ============================================
 // DARJEELINGHOST - FIREBASE CONFIGURATION
 // ============================================
@@ -14,14 +13,17 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
+   updateProfile,
   signOut
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 import {
   getFirestore,
+  collection,
   doc,
   getDoc,
   setDoc,
+  addDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
@@ -63,20 +65,42 @@ export const storage = getStorage(app);
 
 
 // ============================================
-// AUTHENTICATION
+// AUTHENTICATION & USER PROFILE
 // ============================================
 
-// Register a new account
-export async function registerUser(email, password) {
+// Register a new account and initialize /users/{uid} document per firestore.rules
+export async function registerUser(email, password, displayName = "") {
   if (!email || !password) {
     throw new Error("Email and password are required.");
   }
 
-  return await createUserWithEmailAndPassword(
+  const cleanEmail = email.trim();
+  const cleanName = (displayName || cleanEmail.split("@")[0]).trim();
+
+  const credential = await createUserWithEmailAndPassword(
     auth,
-    email.trim(),
+    cleanEmail,
     password
   );
+
+  const user = credential.user;
+
+  if (cleanName) {
+    await updateProfile(user, { displayName: cleanName });
+  }
+
+  // Create /users/{uid} matching exact keys required by firestore.rules
+  const userRef = doc(db, "users", user.uid);
+  await setDoc(userRef, {
+    uid: user.uid,
+    email: cleanEmail,
+    displayName: cleanName,
+    role: "customer",
+    status: "active",
+    createdAt: serverTimestamp()
+  });
+
+  return credential;
 }
 
 
@@ -106,20 +130,36 @@ export async function logoutUser() {
 }
 
 
+// Read Firebase Custom Claims (owner, superAdmin, admin, driver)
+export async function getUserClaims(forceRefresh = false) {
+  if (!auth.currentUser) return null;
+  const tokenResult = await auth.currentUser.getIdTokenResult(forceRefresh);
+  return {
+    owner: tokenResult.claims.owner === true,
+    superAdmin: tokenResult.claims.superAdmin === true,
+    admin: tokenResult.claims.admin === true,
+    driver: tokenResult.claims.driver === true,
+    claims: tokenResult.claims
+  };
+}
+
+
 // ============================================
 // DRIVER APPLICATION
 // ============================================
 
 // Get a driver's own application
 export async function getDriverApplication(uid) {
-  if (!uid || !auth.currentUser || auth.currentUser.uid !== uid) {
+  const targetUid = uid || auth.currentUser?.uid;
+
+  if (!targetUid || !auth.currentUser || auth.currentUser.uid !== targetUid) {
     throw new Error("You can only access your own application.");
   }
 
   const applicationRef = doc(
     db,
     "driverApplications",
-    uid
+    targetUid
   );
 
   const snapshot = await getDoc(applicationRef);
@@ -137,7 +177,6 @@ export async function getDriverApplication(uid) {
 
 // Submit a new driver application
 export async function submitDriverApplication(uid, data) {
-
   if (!auth.currentUser || auth.currentUser.uid !== uid) {
     throw new Error("Authentication required.");
   }
@@ -162,7 +201,7 @@ export async function submitDriverApplication(uid, data) {
       typeof data[field] !== "string" ||
       !data[field].trim()
     ) {
-      throw new Error("Please complete all required fields.");
+      throw new Error(`Please complete all required fields (${field} is missing).`);
     }
   }
 
@@ -173,30 +212,26 @@ export async function submitDriverApplication(uid, data) {
   );
 
   // Prevent accidental replacement of an existing application.
+  // NOTE: Requires `allow read: if isSelf(applicationId) || isAdmin();` in firestore.rules
   const existingApplication = await getDoc(applicationRef);
 
   if (existingApplication.exists()) {
     throw new Error("A driver application already exists.");
   }
 
-  // Create-only submission.
-  // Firebase Rules enforce the actual security.
+  // Create-only submission matching exact keys in firestore.rules
   await setDoc(applicationRef, {
     userId: uid,
-
     name: data.name.trim(),
     email: data.email.trim(),
     phone: data.phone.trim(),
     whatsappNumber: data.whatsappNumber.trim(),
     address: data.address.trim(),
-
     licenceNumber: data.licenceNumber.trim(),
     vehicleType: data.vehicleType.trim(),
     vehicleNumber: data.vehicleNumber.trim(),
-
     status: "submitted",
     verificationStatus: "pending",
-
     createdAt: serverTimestamp()
   });
 }
@@ -207,7 +242,6 @@ export async function submitDriverApplication(uid, data) {
 // ============================================
 
 export async function getDriverStatus(uid) {
-
   const application = await getDriverApplication(uid);
 
   if (!application) {
@@ -224,6 +258,25 @@ export async function getDriverStatus(uid) {
     verificationStatus: application.verificationStatus,
     name: application.name
   };
+}
+
+
+// ============================================
+// CUSTOMER ENQUIRIES
+// ============================================
+
+export async function submitEnquiry(enquiryData) {
+  if (!auth.currentUser) {
+    throw new Error("You must be signed in to submit an enquiry.");
+  }
+
+  const enquiriesRef = collection(db, "enquiries");
+  return await addDoc(enquiriesRef, {
+    ...enquiryData,
+    customerId: auth.currentUser.uid,
+    status: "submitted",
+    createdAt: serverTimestamp()
+  });
 }
 
 
