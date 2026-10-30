@@ -4,72 +4,246 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DarjeelingHost | Driver Portal</title>
+<title>DarjeelingHost V1</title>
+
 <style>
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  color: #172b4d;
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f3f5f7;
+  color:#202b35;
 }
-header {
-  background: #172b4d;
-  color: white;
-  padding: 24px 18px;
-  text-align: center;
+main{
+  max-width:420px;
+  margin:50px auto;
+  padding:25px;
+  background:white;
+  border-radius:12px;
 }
-main {
-  max-width: 500px;
-  margin: 35px auto;
-  padding: 20px;
+h1{margin:0;color:#173d59}
+p{color:#697782}
+label{display:block;margin:15px 0 6px}
+input,select,button{
+  width:100%;
+  padding:12px;
+  border:1px solid #ccd5dd;
+  border-radius:7px;
+  font-size:15px;
 }
-.card {
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-  text-align: center;
+button{
+  background:#173d59;
+  color:white;
+  border:0;
+  margin-top:16px;
+  cursor:pointer;
 }
-a {
-  display: block;
-  padding: 14px;
-  margin-top: 14px;
-  border-radius: 7px;
-  text-decoration: none;
-  background: #172b4d;
-  color: white;
+.secondary{background:#e8edf1;color:#173d59}
+.link{
+  background:none;
+  color:#17628e;
+  padding:0;
+  width:auto;
 }
-.secondary {
-  background: #e8edf3;
-  color: #172b4d;
-}
-footer {
-  text-align: center;
-  padding: 20px;
-  color: #777;
-}
+.hidden{display:none}
+#message{margin-top:15px;font-size:14px}
 </style>
 </head>
+
 <body>
-
-<header>
-  <h1>DarjeelingHost</h1>
-  <p>Driver Portal</p>
-</header>
-
 <main>
-  <div class="card">
-    <h2>Welcome, Drivers</h2>
-    <p>Join the DarjeelingHost driver network.</p>
 
-    <a href="driver-register.html">Register as a Driver</a>
-    <a href="driver-login.html" class="secondary">Driver Login</a>
-  </div>
+<h1>DarjeelingHost</h1>
+<p>Driver Outsourcing Platform · V1</p>
+
+<section id="register">
+<h3>Create Account</h3>
+
+<label>Full Name</label>
+<input id="name" placeholder="Full name">
+
+<label>Account Type</label>
+<select id="type">
+<option value="driver">Driver</option>
+<option value="travel_agent">Travel Agent</option>
+</select>
+
+<label>Email</label>
+<input id="email" type="email" placeholder="Email address">
+
+<label>Password</label>
+<input id="password" type="password" placeholder="Minimum 6 characters">
+
+<button id="registerBtn">Register</button>
+
+<p>Already registered?
+<button class="link" id="goLogin">Login</button>
+</p>
+</section>
+
+<section id="login" class="hidden">
+<h3>Login</h3>
+
+<label>Email</label>
+<input id="loginEmail" type="email">
+
+<label>Password</label>
+<input id="loginPassword" type="password">
+
+<button id="loginBtn">Login</button>
+
+<p>
+<button class="link" id="goRegister">Create account</button>
+</p>
+</section>
+
+<section id="dashboard" class="hidden">
+<h3 id="welcome"></h3>
+<p id="details"></p>
+<button class="secondary" id="logoutBtn">Logout</button>
+</section>
+
+<div id="message"></div>
+
 </main>
 
-<footer>
-  <p>DarjeelingHost Driver Portal</p>
-</footer>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
+<script>
+
+// FIREBASE CONFIGURATION
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAV9MggoBLbr6IQ6NN6xF5tSRwqy0EL17g",
+  authDomain: "studio-5524327838-803a4.firebaseapp.com",
+  projectId: "studio-5524327838-803a4",
+  storageBucket: "studio-5524327838-803a4.firebasestorage.app",
+  messagingSenderId: "4756587991",
+  appId: "1:4756587991:web:e5472eb8282e25b05c7792"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const $ = id => document.getElementById(id);
+
+function page(name){
+  ["register","login","dashboard"].forEach(id=>{
+    $(id).classList.add("hidden");
+  });
+  $(name).classList.remove("hidden");
+  $("message").textContent="";
+}
+
+$("goLogin").onclick=()=>page("login");
+$("goRegister").onclick=()=>page("register");
+
+// REGISTRATION
+
+$("registerBtn").onclick=async()=>{
+
+  const name=$("name").value.trim();
+  const type=$("type").value;
+  const email=$("email").value.trim();
+  const password=$("password").value;
+
+  if(!name || !email || password.length<6){
+    $("message").textContent=
+      "Enter your details. Password must contain at least 6 characters.";
+    return;
+  }
+
+  try{
+    $("registerBtn").disabled=true;
+    $("message").textContent="Creating account...";
+
+    const result=await auth.createUserWithEmailAndPassword(
+      email,password
+    );
+
+    await db.collection("users").doc(result.user.uid).set({
+      name:name,
+      email:email,
+      accountType:type,
+      status:"pending",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    $("message").textContent=
+      "Registration successful. Your account is pending approval.";
+
+  }catch(error){
+    $("message").textContent=error.message;
+  }finally{
+    $("registerBtn").disabled=false;
+  }
+};
+
+// LOGIN
+
+$("loginBtn").onclick=async()=>{
+
+  try{
+    $("message").textContent="Logging in...";
+
+    await auth.signInWithEmailAndPassword(
+      $("loginEmail").value.trim(),
+      $("loginPassword").value
+    );
+
+  }catch(error){
+    $("message").textContent=error.message;
+  }
+};
+
+// AUTHENTICATION STATE
+
+auth.onAuthStateChanged(async user=>{
+
+  if(!user){
+    page("register");
+    return;
+  }
+
+  try{
+
+    const doc=await db.collection("users").doc(user.uid).get();
+
+    if(!doc.exists){
+      page("dashboard");
+      $("welcome").textContent="Account profile unavailable";
+      $("details").textContent="Please contact the administrator.";
+      return;
+    }
+
+    const data=doc.data();
+
+    page("dashboard");
+
+    $("welcome").textContent="Welcome, "+data.name;
+
+    const role=data.accountType==="travel_agent"
+      ?"Travel Agent"
+      :"Driver";
+
+    $("details").textContent=
+      role+" | Status: "+data.status+
+      ". Operational access requires approval.";
+
+  }catch(error){
+    $("message").textContent=error.message;
+  }
+
+});
+
+// LOGOUT
+
+$("logoutBtn").onclick=()=>auth.signOut();
+
+</script>
 </body>
 </html>
