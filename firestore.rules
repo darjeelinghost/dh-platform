@@ -1,0 +1,55 @@
+
+match /driverApplications/{applicationId} {
+
+  // A driver can submit only their own application.
+  allow create: if request.auth != null
+    && applicationId == request.auth.uid
+    && request.resource.data.userId == request.auth.uid
+    && request.resource.data.status == "submitted"
+    && request.resource.data.verificationStatus == "pending"
+    && request.resource.data.keys().hasAll([
+      "userId",
+      "name",
+      "email",
+      "phone",
+      "address",
+      "licenceNumber",
+      "vehicleType",
+      "vehicleNumber",
+      "status",
+      "verificationStatus",
+      "createdAt"
+    ])
+    && request.resource.data.keys().hasOnly([
+      "userId",
+      "name",
+      "email",
+      "phone",
+      "address",
+      "licenceNumber",
+      "vehicleType",
+      "vehicleNumber",
+      "status",
+      "verificationStatus",
+      "createdAt"
+    ])
+    && request.resource.data.name is string
+    && request.resource.data.email is string
+    && request.resource.data.phone is string
+    && request.resource.data.address is string
+    && request.resource.data.licenceNumber is string
+    && request.resource.data.vehicleType is string
+    && request.resource.data.vehicleNumber is string
+    && request.resource.data.createdAt == request.time;
+
+  // Drivers can read only their own application.
+  // Admin access follows existing Firebase custom claims.
+  allow read: if request.auth != null
+    && (
+      resource.data.userId == request.auth.uid
+      || isAdmin()
+    );
+
+  // No client-side updates or deletion.
+  allow update, delete: if false;
+}
