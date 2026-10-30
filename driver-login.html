@@ -2,117 +2,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Driver Login | DarjeelingHost</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 400px;
-      margin: 60px auto;
-      padding: 25px;
-      background: white;
-      border-radius: 12px;
-    }
-    h2 { text-align: center; }
-    input, button {
-      box-sizing: border-box;
-      width: 100%;
-      padding: 13px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 15px;
-    }
-    button {
-      background: #172b4d;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:disabled { opacity: 0.6; }
-    #message { text-align: center; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Login | DarjeelingHost</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+  padding: 20px;
+}
+.container {
+  max-width: 420px;
+  margin: 60px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+}
+h2 { text-align: center; }
+input, button {
+  width: 100%;
+  padding: 13px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+}
+button {
+  background: #172b4d;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button:disabled { opacity: .6; }
+#message { text-align: center; }
+</style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Driver Login</h2>
-  <p>Sign in to your DarjeelingHost account.</p>
+<h2>Driver Login</h2>
+<p>Sign in to your DarjeelingHost account.</p>
 
-  <form id="loginForm">
-    <input
-      type="email"
-      name="email"
-      placeholder="Email Address"
-      required
-    >
+<form id="loginForm">
 
-    <input
-      type="password"
-      name="password"
-      placeholder="Password"
-      required
-    >
+<input name="email" type="email"
+placeholder="Email Address" required>
 
-    <button id="loginButton" type="submit">Login</button>
-  </form>
+<input name="password" type="password"
+placeholder="Password" required>
 
-  <p id="message" role="status"></p>
+<button id="loginButton" type="submit">
+Login
+</button>
 
-  <p>New driver? <a href="driver-register.html">Register here</a></p>
-  <p><a href="index.html">Back to Home</a></p>
+</form>
+
+<p id="message" role="status"></p>
+
+<p>New driver?
+<a href="driver-register.html">Register here</a>
+</p>
+
+<a href="index.html">Back to Home</a>
 </div>
 
 <script type="module">
-  import {
-    loginUser,
-    getDriverApplication
-  } from "./firebase.js";
+import {
+  loginUser,
+  getDriverApplication
+} from "./firebase.js";
 
-  const form = document.getElementById("loginForm");
-  const message = document.getElementById("message");
-  const button = document.getElementById("loginButton");
+const form = document.getElementById("loginForm");
+const message = document.getElementById("message");
+const button = document.getElementById("loginButton");
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
 
-    const email = form.email.value.trim();
-    const password = form.password.value;
+  button.disabled = true;
+  message.textContent = "Signing in...";
 
-    button.disabled = true;
-    message.textContent = "Signing in...";
+  try {
+    const credential = await loginUser(
+      form.email.value.trim(),
+      form.password.value
+    );
 
-    try {
-      const credential = await loginUser(email, password);
+    const application = await getDriverApplication(
+      credential.user.uid
+    );
 
-      const application = await getDriverApplication(
-        credential.user.uid
-      );
-
-      if (!application) {
-        message.textContent =
-          "Your account has no driver application. Please contact support.";
-        return;
-      }
-
-      window.location.href = "driver-dashboard.html";
-
-    } catch (error) {
-      console.error(error);
+    if (!application) {
       message.textContent =
-        error.code === "auth/invalid-credential"
-          ? "Incorrect email or password."
-          : error.message;
-    } finally {
-      button.disabled = false;
+        "No driver application found. Please contact support.";
+      return;
     }
-  });
+
+    window.location.href = "driver-dashboard.html";
+
+  } catch (error) {
+    console.error(error);
+
+    message.textContent =
+      error.code === "auth/invalid-credential"
+        ? "Incorrect email or password."
+        : error.message;
+
+  } finally {
+    button.disabled = false;
+  }
+});
 </script>
 
 </body>
