@@ -1,533 +1,465 @@
 
-import { auth, db, logoutUser } from "./firebase.js";
-
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
-
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  updateDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
-
-const historyList = document.getElementById("tripHistoryList");
-const messageBox = document.getElementById("historyMessage");
-
-const totalTripsElement = document.getElementById("totalTrips");
-const completedTripsElement = document.getElementById("completedTrips");
-const outstandingBalanceElement = document.getElementById("outstandingBalance");
-
-let currentUser = null;
-let trips = [];
-let payments = [];
-let activeFilter = "all";
-
-function showMessage(message, type = "error") {
-  messageBox.textContent = message;
-  messageBox.className = `message show ${type}`;
-}
-
-function clearMessage() {
-  messageBox.textContent = "";
-  messageBox.className = "message";
-}
-
-function createElement(tag, className, text) {
-  const element = document.createElement(tag);
-
-  if (className) element.className = className;
-  if (text !== undefined) element.textContent = text;
-
-  return element;
-}
-
-function formatDate(value) {
-  if (!value) return "Date unavailable";
-
-  if (value.toDate) {
-    value = value.toDate();
-  } else {
-    value = new Date(value);
-  }
-
-  if (Number.isNaN(value.getTime())) {
-    return "Date unavailable";
-  }
-
-  return value.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric"
-  });
-}
-
-function formatMoney(value) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0
-  }).format(Number(value) || 0);
-}
-
-function getPayment(tripId) {
-  return payments.find(payment => payment.id === tripId) || null;
-}
-
-function isArchived(trip) {
-  return trip.archived === true || trip.status === "archived";
-}
-
-function getStatusClass(status) {
-  const allowed = [
-    "completed",
-    "archived",
-    "cancelled",
-    "assigned",
-    "open",
-    "in_progress"
-  ];
-
-  return allowed.includes(status)
-    ? `status-${status}`
-    : "";
-}
-
-function getStatusLabel(trip) {
-  if (isArchived(trip)) return "Archived";
-
-  const labels = {
-    completed: "Completed",
-    cancelled: "Cancelled",
-    assigned: "Assigned",
-    open: "Open",
-    in_progress: "In Progress"
-  };
-
-  return labels[trip.status] || "Unknown";
-}
-
-function isActiveTrip(trip) {
-  return ["open", "assigned", "in_progress"].includes(trip.status);
-}
-
-function getFilteredTrips() {
-  if (activeFilter === "completed") {
-    return trips.filter(
-      trip => trip.status === "completed" && !isArchived(trip)
-    );
-  }
-
-  if (activeFilter === "active") {
-    return trips.filter(isActiveTrip);
-  }
-
-  if (activeFilter === "archived") {
-    return trips.filter(isArchived);
-  }
-
-  return trips;
-}
-
-function updateSummary() {
-  const completed = trips.filter(
-    trip => trip.status === "completed" && !isArchived(trip)
-  );
-
-  const outstanding = payments.reduce((total, payment) => {
-    const agreed = Number(payment.agreedFare) || 0;
-    const paid = Number(payment.amountPaid) || 0;
-
-    return total + Math.max(0, agreed - paid);
-  }, 0);
-
-  totalTripsElement.textContent = trips.length;
-  completedTripsElement.textContent = completed.length;
-  outstandingBalanceElement.textContent = formatMoney(outstanding);
-}
-
-function renderTrips() {
-  historyList.replaceChildren();
-
-  const filtered = getFilteredTrips();
-
-  if (filtered.length === 0) {
-    const empty = createElement("div", "empty-state");
-
-    empty.appendChild(
-      createElement("strong", "", "No trips found")
-    );
-
-    empty.appendChild(
-      createElement(
-        "p",
-        "",
-        "Your trip records will appear here when you post or accept trips."
-      )
-    );
-
-    historyList.appendChild(empty);
-    return;
-  }
-
-  filtered.forEach(trip => {
-    historyList.appendChild(createTripCard(trip));
-  });
-}
-
-function createTripCard(trip) {
-  const card = createElement("article", "trip-card");
-
-  const top = createElement("div", "trip-top");
-  const details = createElement("div");
-
-  const route = createElement(
-    "h3",
-    "route",
-    `${trip.source || "Unknown"} → ${trip.destination || "Unknown"}`
-  );
-
-  const status = createElement(
-    "span",
-    `status ${getStatusClass(isArchived(trip) ? "archived" : trip.status)}`,
-    getStatusLabel(trip)
-  );
-
-  const meta = createElement("div", "trip-meta");
-
-  const date = createElement(
-    "span",
-    "",
-    `Travel date: ${trip.travelDate || "Not specified"}`
-  );
-
-  const time = createElement(
-    "span",
-    "",
-    `Pickup: ${trip.travelTime || "Not specified"}`
-  );
-
-  const type = createElement(
-    "span",
-    "",
-    `Trip type: ${trip.tripType || "Not specified"}`
-  );
-
-  meta.append(date, time, type);
-  details.append(route, meta);
-  top.append(details, status);
-  card.appendChild(top);
-
-  const payment = getPayment(trip.id);
-
-  const agreedFare = payment
-    ? Number(payment.agreedFare) || 0
-    : Number(trip.fare) || 0;
-
-  const amountPaid = payment
-    ? Number(payment.amountPaid) || 0
-    : 0;
-
-  const outstanding = Math.max(0, agreedFare - amountPaid);
-
-  const paymentRow = createElement("div", "payment-row");
-
-  const fare = createElement("div");
-  fare.append(
-    createElement("span", "muted", "Agreed fare"),
-    createElement("br"),
-    createElement("strong", "", formatMoney(agreedFare))
-  );
-
-  const paid = createElement("div");
-  paid.append(
-    createElement("span", "muted", "Amount paid"),
-    createElement("br"),
-    createElement("strong", "", formatMoney(amountPaid))
-  );
-
-  const balance = createElement("div");
-  balance.append(
-    createElement("span", "muted", "Outstanding"),
-    createElement("br"),
-    createElement("strong", "", formatMoney(outstanding))
-  );
-
-  paymentRow.append(fare, paid, balance);
-  card.appendChild(paymentRow);
-
-  const paymentStatus = payment?.paymentStatus || "unpaid";
-
-  const paymentInfo = createElement(
-    "p",
-    "muted",
-    `Payment status: ${paymentStatus.replaceAll("_", " ")}`
-  );
-
-  paymentInfo.style.margin = "12px 0 0";
-  card.appendChild(paymentInfo);
-
-  const actions = createElement("div", "actions");
-
-  if (
-    trip.posterUid === currentUser.uid &&
-    trip.status === "completed"
-  ) {
-    const archiveButton = createElement(
-      "button",
-      "btn btn-secondary",
-      isArchived(trip) ? "Restore Trip" : "Archive Trip"
-    );
-
-    archiveButton.type = "button";
-
-    archiveButton.addEventListener("click", () => {
-      toggleArchive(trip, archiveButton);
-    });
-
-    actions.appendChild(archiveButton);
-  }
-
-  if (trip.status === "assigned" || trip.status === "in_progress") {
-    const info = createElement(
-      "span",
-      "muted",
-      "Completion requires confirmation from both parties."
-    );
-
-    actions.appendChild(info);
-  }
-
-  if (actions.children.length > 0) {
-    card.appendChild(actions);
-  }
-
-  return card;
-}
-
-async function toggleArchive(trip, button) {
-  if (!currentUser || trip.posterUid !== currentUser.uid) {
-    showMessage("You are not authorised to change this trip.");
-    return;
-  }
-
-  if (trip.status !== "completed") {
-    showMessage("Only completed trips can be archived or restored.");
-    return;
-  }
-
-  const currentlyArchived = isArchived(trip);
-
-  const confirmed = window.confirm(
-    currentlyArchived
-      ? "Restore this completed trip to your history?"
-      : "Archive this completed trip? You can restore it later."
-  );
-
-  if (!confirmed) return;
-
-  button.disabled = true;
-  button.textContent = "Updating...";
-
-  try {
-    await updateDoc(
-      doc(db, "trips", trip.id),
-      {
-        archived: !currentlyArchived,
-        archivedAt: currentlyArchived ? null : serverTimestamp(),
-        updatedAt: serverTimestamp()
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a43">
+
+  <title>Trip History | DarjeelingHost</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f6fa;
+      color: #243447;
+    }
+
+    header {
+      background: #102a43;
+      color: white;
+      padding: 17px 20px;
+    }
+
+    .header-inner {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    .brand span {
+      color: #f6bd60;
+    }
+
+    nav {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    nav a:hover {
+      color: #f6bd60;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 0 16px 40px;
+    }
+
+    .page-heading {
+      margin-bottom: 22px;
+    }
+
+    .page-heading h1 {
+      margin: 0 0 7px;
+      font-size: 27px;
+    }
+
+    .page-heading p {
+      margin: 0;
+      color: #68788a;
+      line-height: 1.5;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .summary-card {
+      background: white;
+      border: 1px solid #e3e9ef;
+      border-radius: 12px;
+      padding: 19px;
+      box-shadow: 0 3px 12px rgba(20, 40, 60, 0.04);
+    }
+
+    .summary-card p {
+      margin: 0 0 10px;
+      color: #68788a;
+      font-size: 13px;
+    }
+
+    .summary-card strong {
+      font-size: 25px;
+      overflow-wrap: anywhere;
+    }
+
+    .history-panel {
+      background: white;
+      border: 1px solid #e3e9ef;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .panel-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .panel-heading h2 {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .filter-btn {
+      border: 1px solid #d6dee7;
+      background: white;
+      color: #405367;
+      border-radius: 20px;
+      padding: 9px 15px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .filter-btn.active {
+      background: #102a43;
+      border-color: #102a43;
+      color: white;
+    }
+
+    .trip-list {
+      display: grid;
+      gap: 15px;
+    }
+
+    .trip-card {
+      border: 1px solid #e3e9ef;
+      border-radius: 10px;
+      padding: 17px;
+      background: #fff;
+    }
+
+    .trip-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .route {
+      margin: 0 0 12px;
+      font-size: 18px;
+      overflow-wrap: anywhere;
+    }
+
+    .trip-meta {
+      display: flex;
+      gap: 9px 17px;
+      flex-wrap: wrap;
+      color: #68788a;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .status {
+      display: inline-block;
+      border-radius: 20px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #edf1f5;
+      color: #405367;
+      white-space: nowrap;
+    }
+
+    .status-completed {
+      background: #e4f5eb;
+      color: #167443;
+    }
+
+    .status-archived {
+      background: #edf1f5;
+      color: #586779;
+    }
+
+    .status-cancelled {
+      background: #fde8e7;
+      color: #a52b27;
+    }
+
+    .status-assigned,
+    .status-in_progress {
+      background: #e6efff;
+      color: #2456a6;
+    }
+
+    .status-open {
+      background: #fff3d9;
+      color: #8a5a00;
+    }
+
+    .payment-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      border-top: 1px solid #edf0f3;
+      margin-top: 16px;
+      padding-top: 15px;
+    }
+
+    .payment-row strong {
+      display: inline-block;
+      margin-top: 5px;
+      font-size: 15px;
+    }
+
+    .muted {
+      color: #758395;
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 7px;
+      padding: 10px 15px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: #e9eef4;
+      color: #243447;
+    }
+
+    .btn-secondary:hover {
+      background: #dce5ee;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 15px;
+      color: #68788a;
+      background: #f8fafc;
+      border-radius: 9px;
+      line-height: 1.6;
+    }
+
+    .empty-state strong {
+      display: block;
+      color: #243447;
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      margin: 0;
+    }
+
+    .message {
+      display: none;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.error {
+      background: #fde8e7;
+      color: #9b2525;
+    }
+
+    .message.success {
+      background: #e4f5eb;
+      color: #167443;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 18px;
+      color: #2456a6;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 22px 15px;
+      color: #758395;
+      font-size: 12px;
+    }
+
+    @media (max-width: 650px) {
+      main {
+        margin-top: 22px;
       }
-    );
 
-    trip.archived = !currentlyArchived;
+      .summary-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
 
-    if (currentlyArchived) {
-      delete trip.archivedAt;
-    } else {
-      trip.archivedAt = new Date();
+      .summary-card {
+        padding: 15px;
+      }
+
+      .summary-card strong {
+        font-size: 22px;
+      }
+
+      .history-panel {
+        padding: 14px;
+      }
+
+      .trip-top {
+        flex-direction: column;
+      }
+
+      .payment-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .page-heading h1 {
+        font-size: 23px;
+      }
     }
+  </style>
+</head>
 
-    clearMessage();
-    showMessage(
-      currentlyArchived
-        ? "Trip restored successfully."
-        : "Trip archived successfully.",
-      "success"
-    );
+<body>
 
-    updateSummary();
-    renderTrips();
+  <header>
+    <div class="header-inner">
+      <div class="brand">Darjeeling<span>Host</span></div>
 
-  } catch (error) {
-    console.error("Trip archive error:", error);
+      <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="trip-details.html">Post a Trip</a>
+        <a href="notifications.html">Notifications</a>
+      </nav>
+    </div>
+  </header>
 
-    showMessage(
-      error.code === "permission-denied"
-        ? "Firebase rules did not allow this operation. Check that the trip is completed and belongs to you."
-        : "Unable to update this trip. Please try again."
-    );
+  <main>
 
-    button.disabled = false;
-    button.textContent = currentlyArchived
-      ? "Restore Trip"
-      : "Archive Trip";
-  }
-}
+    <a class="back-link" href="dashboard.html">
+      ← Back to Dashboard
+    </a>
 
-async function loadTrips(user) {
-  historyList.replaceChildren();
+    <section class="page-heading">
+      <h1>My Trip History</h1>
+      <p>
+        View your posted trips, accepted trips, completed journeys
+        and payment records in one place.
+      </p>
+    </section>
 
-  historyList.appendChild(
-    createElement("div", "empty-state", "Loading your trip records...")
-  );
+    <section class="summary-grid">
 
-  try {
-    const tripsCollection = collection(db, "trips");
+      <div class="summary-card">
+        <p>Total Trips</p>
+        <strong id="totalTrips">—</strong>
+      </div>
 
-    const postedQuery = query(
-      tripsCollection,
-      where("posterUid", "==", user.uid)
-    );
+      <div class="summary-card">
+        <p>Completed Trips</p>
+        <strong id="completedTrips">—</strong>
+      </div>
 
-    const assignedQuery = query(
-      tripsCollection,
-      where("assignedDriverUid", "==", user.uid)
-    );
+      <div class="summary-card">
+        <p>Outstanding Balance</p>
+        <strong id="outstandingBalance">—</strong>
+      </div>
 
-    const [postedSnapshot, assignedSnapshot] = await Promise.all([
-      getDocs(postedQuery),
-      getDocs(assignedQuery)
-    ]);
+    </section>
 
-    const tripMap = new Map();
+    <section class="history-panel">
 
-    postedSnapshot.docs.forEach(item => {
-      tripMap.set(item.id, {
-        id: item.id,
-        ...item.data()
-      });
-    });
+      <div class="panel-heading">
+        <h2>Trip Records</h2>
+      </div>
 
-    assignedSnapshot.docs.forEach(item => {
-      tripMap.set(item.id, {
-        id: item.id,
-        ...item.data()
-      });
-    });
+      <div id="historyMessage" class="message" role="status"
+           aria-live="polite"></div>
 
-    trips = Array.from(tripMap.values());
+      <div class="filters">
+        <button type="button"
+                class="filter-btn active"
+                data-filter="all">
+          All Trips
+        </button>
 
-    trips.sort((a, b) => {
-      const dateA = a.createdAt?.toMillis
-        ? a.createdAt.toMillis()
-        : 0;
+        <button type="button"
+                class="filter-btn"
+                data-filter="active">
+          Active
+        </button>
 
-      const dateB = b.createdAt?.toMillis
-        ? b.createdAt.toMillis()
-        : 0;
+        <button type="button"
+                class="filter-btn"
+                data-filter="completed">
+          Completed
+        </button>
 
-      return dateB - dateA;
-    });
+        <button type="button"
+                class="filter-btn"
+                data-filter="archived">
+          Archived
+        </button>
+      </div>
 
-    await loadPayments(user);
+      <div id="tripHistoryList" class="trip-list">
+        <div class="empty-state">
+          Loading your trip records...
+        </div>
+      </div>
 
-    updateSummary();
-    renderTrips();
+    </section>
 
-  } catch (error) {
-    console.error("Trip history loading error:", error);
+  </main>
 
-    historyList.replaceChildren();
+  <footer>
+    © 2026 DarjeelingHost. All rights reserved.
+  </footer>
 
-    historyList.appendChild(
-      createElement(
-        "div",
-        "empty-state",
-        "Unable to load your trip history. Please refresh the page."
-      )
-    );
+  <script type="module" src="./js/trip-history.js"></script>
 
-    showMessage(
-      error.code === "permission-denied"
-        ? "Firestore denied access. Check your trip and payment security rules."
-        : "There was a problem loading your trip history."
-    );
-  }
-}
-
-async function loadPayments(user) {
-  const paymentCollection = collection(db, "paymentRecords");
-
-  const posterQuery = query(
-    paymentCollection,
-    where("posterUid", "==", user.uid)
-  );
-
-  const driverQuery = query(
-    paymentCollection,
-    where("driverUid", "==", user.uid)
-  );
-
-  const [posterSnapshot, driverSnapshot] = await Promise.all([
-    getDocs(posterQuery),
-    getDocs(driverQuery)
-  ]);
-
-  const paymentMap = new Map();
-
-  posterSnapshot.docs.forEach(item => {
-    paymentMap.set(item.id, {
-      id: item.id,
-      ...item.data()
-    });
-  });
-
-  driverSnapshot.docs.forEach(item => {
-    paymentMap.set(item.id, {
-      id: item.id,
-      ...item.data()
-    });
-  });
-
-  payments = Array.from(paymentMap.values());
-}
-
-document.querySelectorAll("[data-filter]").forEach(button => {
-  button.addEventListener("click", () => {
-    activeFilter = button.dataset.filter;
-
-    document.querySelectorAll("[data-filter]").forEach(filter => {
-      filter.classList.toggle("active", filter === button);
-    });
-
-    renderTrips();
-  });
-});
-
-document.getElementById("logoutBtn").addEventListener(
-  "click",
-  async () => {
-    try {
-      await logoutUser();
-      window.location.replace("login.html");
-    } catch (error) {
-      console.error("Logout error:", error);
-      showMessage("Unable to log out. Please try again.");
-    }
-  }
-);
-
-onAuthStateChanged(auth, async user => {
-  currentUser = user;
-
-  if (!user) {
-    window.location.replace("login.html");
-    return;
-  }
-
-  await loadTrips(user);
-});
+</body>
+</html>
