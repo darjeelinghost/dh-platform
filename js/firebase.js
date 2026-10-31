@@ -1,5 +1,13 @@
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+// ============================================
+// DARJEELINGHOST V1 - FIREBASE CONFIGURATION
+// ============================================
+
+import {
+  initializeApp,
+  getApps,
+  getApp
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
 
 import {
   getAuth,
@@ -7,7 +15,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  setPersistence,
+  browserLocalPersistence,
+  deleteUser
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
 import {
@@ -19,10 +29,9 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
-
-/* =========================================
-   1. FIREBASE CONFIGURATION
-========================================= */
+// ============================================
+// FIREBASE PROJECT CONFIGURATION
+// ============================================
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1JZNg8nu_YvDFgJHRSkCqetQIH_k3jyo",
@@ -34,295 +43,371 @@ const firebaseConfig = {
   measurementId: "G-FRW5QJTF9X"
 };
 
+// ============================================
+// INITIALISE FIREBASE
+// ============================================
 
-/* =========================================
-   2. INITIALISE FIREBASE
-========================================= */
-
-const app = initializeApp(firebaseConfig);
+const app = getApps().length
+  ? getApp()
+  : initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
-
 const db = getFirestore(app);
 
+// Keep users signed in across browser sessions.
+const persistenceReady = setPersistence(
+  auth,
+  browserLocalPersistence
+).catch((error) => {
+  console.error(
+    "Firebase persistence setup failed:",
+    error
+  );
+});
 
-/* =========================================
-   3. USER PROFILE VALIDATION
-========================================= */
+// ============================================
+// USER PROFILE CONFIGURATION
+// ============================================
 
-const allowedRegistrationRoles = ["driver", "broker"];
+const ALLOWED_ROLES = [
+  "driver",
+  "broker"
+];
 
-function cleanText(value, maxLength = 150) {
-  return String(value ?? "").trim().slice(0, maxLength);
+const ALLOWED_PROFILE_FIELDS = [
+  "displayName",
+  "phone",
+  "whatsapp",
+  "address",
+  "operatingArea",
+  "experience",
+  "introduction",
+  "vehicle",
+  "photoURL"
+];
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function requireValue(value, fieldName) {
+  if (
+    value === undefined ||
+    value === null ||
+    String(value).trim() === ""
+  ) {
+    throw new Error(`${fieldName} is required.`);
+  }
 }
 
-function validateRegistrationData(data) {
-  const displayName = cleanText(data.displayName, 100);
-  const phone = cleanText(data.phone, 25);
-  const whatsapp = cleanText(data.whatsapp, 25);
-  const role = cleanText(data.role, 30).toLowerCase();
+function cleanProfileData(data = {}) {
+  const cleaned = {};
 
-  if (!displayName) {
-    throw new Error("Please enter your full name.");
+  for (const field of ALLOWED_PROFILE_FIELDS) {
+    if (
+      Object.prototype.hasOwnProperty.call(data, field)
+    ) {
+      cleaned[field] = data[field];
+    }
   }
 
-  if (!phone) {
-    throw new Error("Please enter your phone number.");
-  }
-
-  if (!allowedRegistrationRoles.includes(role)) {
-    throw new Error("Please select a valid account type.");
-  }
-
-  return {
-    displayName,
-    phone,
-    whatsapp,
-    role
-  };
+  return cleaned;
 }
 
+function getUsersCollectionReference(uid) {
+  requireValue(uid, "User ID");
 
-/* =========================================
-   4. CREATE USER PROFILE
-========================================= */
-
-async function createUserProfile(uid, profileData) {
-  if (!uid) {
-    throw new Error("A valid user ID is required.");
-  }
-
-  const profile = validateRegistrationData(profileData);
-
-  const userRef = doc(db, "users", uid);
-
-  const existingProfile = await getDoc(userRef);
-
-  if (existingProfile.exists()) {
-    throw new Error("A profile already exists for this account.");
-  }
-
-  const newProfile = {
-    uid,
-    displayName: profile.displayName,
-    phone: profile.phone,
-    whatsapp: profile.whatsapp,
-    email: cleanText(profileData.email, 254).toLowerCase(),
-    role: profile.role,
-    status: "pending",
-    verificationStatus: "pending",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  };
-
-  await setDoc(userRef, newProfile);
-
-  return newProfile;
+  return doc(db, "users", uid);
 }
 
+// ============================================
+// REGISTER USER
+// Supports:
+// registerUser({ email, password, ...profile })
+// registerUser(email, password, profile)
+// ============================================
 
-/* =========================================
-   5. REGISTER USER
-========================================= */
+async function registerUser(
+  emailOrData,
+  password,
+  additionalProfile = {}
+) {
+  await persistenceReady;
 
-async function registerUser(userData) {
-  const profile = validateRegistrationData(userData);
+  let email;
+  let userPassword;
+  let profile;
 
-  const email = cleanText(userData.email, 254).toLowerCase();
-  const password = String(userData.password ?? "");
+  if (
+    typeof emailOrData === "object" &&
+    emailOrData !== null
+  ) {
+    const data = emailOrData;
 
-  if (!email || !email.includes("@")) {
-    throw new Error("Please enter a valid email address.");
+    email = data.email;
+    userPassword = data.password;
+
+    profile = {
+      ...data
+    };
+
+    delete profile.email;
+    delete profile.password;
+
+  } else {
+    email = emailOrData;
+    userPassword = password;
+
+    profile = {
+      ...additionalProfile
+    };
   }
 
-  if (password.length < 6) {
-    throw new Error("Password must contain at least 6 characters.");
+  requireValue(email, "Email");
+  requireValue(userPassword, "Password");
+
+  const role = profile.role || "driver";
+
+  if (!ALLOWED_ROLES.includes(role)) {
+    throw new Error(
+      "Only Driver and Broker registrations are permitted."
+    );
   }
 
+  const displayName =
+    profile.displayName ||
+    profile.fullName ||
+    "";
+
+  requireValue(displayName, "Full name");
+
+  // Create Firebase Authentication account.
   const credential = await createUserWithEmailAndPassword(
     auth,
-    email,
-    password
+    String(email).trim(),
+    userPassword
   );
 
+  const user = credential.user;
+
   try {
-    await updateProfile(credential.user, {
-      displayName: profile.displayName
+    // Create the initial Firestore user profile.
+    await createUserProfile(user, {
+      displayName,
+      phone: profile.phone || "",
+      whatsapp: profile.whatsapp || "",
+      role
     });
 
-    const savedProfile = await createUserProfile(
-      credential.user.uid,
-      {
-        ...profile,
-        email
-      }
-    );
-
     return {
-      user: credential.user,
-      profile: savedProfile
+      user,
+      uid: user.uid,
+      role,
+      status: "pending"
     };
 
   } catch (error) {
-    // Do not silently delete the authentication account.
-    // A failed profile creation must be investigated and recovered.
-    console.error("User profile creation failed:", error);
+    console.error(
+      "User profile creation failed:",
+      error
+    );
+
+    // Avoid leaving an orphaned Authentication account.
+    try {
+      await deleteUser(user);
+    } catch (deleteError) {
+      console.error(
+        "Could not roll back Authentication account:",
+        deleteError
+      );
+    }
 
     throw new Error(
-      "Your authentication account was created, but your profile " +
-      "could not be saved. Please contact the administrator."
+      "Your account profile could not be created. Please try again or contact support."
     );
   }
 }
 
-
-/* =========================================
-   6. LOGIN USER
-========================================= */
+// ============================================
+// LOGIN USER
+// ============================================
 
 async function loginUser(email, password) {
-  const cleanEmail = cleanText(email, 254).toLowerCase();
+  await persistenceReady;
 
-  if (!cleanEmail || !password) {
-    throw new Error("Please enter your email and password.");
-  }
+  requireValue(email, "Email");
+  requireValue(password, "Password");
 
   const credential = await signInWithEmailAndPassword(
     auth,
-    cleanEmail,
+    String(email).trim(),
     password
   );
 
   return credential.user;
 }
 
-
-/* =========================================
-   7. LOGOUT USER
-========================================= */
+// ============================================
+// LOGOUT USER
+// ============================================
 
 async function logoutUser() {
   await signOut(auth);
 }
 
-
-/* =========================================
-   8. AUTHENTICATION STATE
-========================================= */
+// ============================================
+// AUTHENTICATION OBSERVER
+// ============================================
 
 function observeAuth(callback) {
   if (typeof callback !== "function") {
-    throw new Error("Authentication callback must be a function.");
+    throw new Error(
+      "Authentication callback must be a function."
+    );
   }
 
   return onAuthStateChanged(auth, callback);
 }
 
+// ============================================
+// GET USER PROFILE
+// ============================================
 
-/* =========================================
-   9. GET USER PROFILE
-========================================= */
+async function getUserProfile(uid = auth.currentUser?.uid) {
+  requireValue(uid, "User ID");
 
-async function getUserProfile(uid) {
-  if (!uid) {
-    throw new Error("A user ID is required.");
-  }
+  const userReference = getUsersCollectionReference(uid);
 
-  const userRef = doc(db, "users", uid);
-
-  const snapshot = await getDoc(userRef);
+  const snapshot = await getDoc(userReference);
 
   if (!snapshot.exists()) {
     return null;
   }
 
-  return snapshot.data();
+  return {
+    uid: snapshot.id,
+    ...snapshot.data()
+  };
 }
 
+// ============================================
+// CREATE USER PROFILE
+// ============================================
 
-/* =========================================
-   10. UPDATE USER PROFILE
-========================================= */
+async function createUserProfile(userOrUid, profileData = {}) {
+  const uid =
+    typeof userOrUid === "string"
+      ? userOrUid
+      : userOrUid?.uid;
 
-// Only ordinary profile fields are editable here.
-// Role, status and verification permissions are excluded.
+  requireValue(uid, "User ID");
 
-async function updateUserProfile(uid, updates) {
+  const email =
+    typeof userOrUid === "object"
+      ? userOrUid?.email || ""
+      : auth.currentUser?.email || "";
+
+  const role = profileData.role || "driver";
+
+  if (!ALLOWED_ROLES.includes(role)) {
+    throw new Error(
+      "Invalid registration role."
+    );
+  }
+
+  const userReference = getUsersCollectionReference(uid);
+
+  const existingProfile = await getDoc(userReference);
+
+  if (existingProfile.exists()) {
+    throw new Error(
+      "A profile already exists for this account."
+    );
+  }
+
+  const displayName =
+    profileData.displayName ||
+    profileData.fullName ||
+    "";
+
+  requireValue(displayName, "Full name");
+
+  const profile = {
+    uid,
+    displayName,
+    phone: profileData.phone || "",
+    whatsapp: profileData.whatsapp || "",
+    email,
+    role,
+    status: "pending",
+    verificationStatus: "pending",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+
+  await setDoc(userReference, profile);
+
+  return profile;
+}
+
+// ============================================
+// UPDATE USER PROFILE
+// Users cannot change their own role,
+// account status or verification status.
+// ============================================
+
+async function updateUserProfile(uid, updates = {}) {
+  requireValue(uid, "User ID");
+
   const currentUser = auth.currentUser;
 
-  if (!currentUser || currentUser.uid !== uid) {
-    throw new Error("You can only update your own profile.");
+  if (!currentUser) {
+    throw new Error(
+      "You must be logged in to update your profile."
+    );
   }
 
-  const allowedFields = [
-    "displayName",
-    "phone",
-    "whatsapp",
-    "address",
-    "operatingArea",
-    "experience",
-    "introduction"
-  ];
-
-  const safeUpdates = {};
-
-  for (const field of allowedFields) {
-    if (Object.prototype.hasOwnProperty.call(updates, field)) {
-      safeUpdates[field] = cleanText(
-        updates[field],
-        field === "introduction" ? 1000 : 250
-      );
-    }
+  if (currentUser.uid !== uid) {
+    throw new Error(
+      "You cannot update another user's profile."
+    );
   }
+
+  const safeUpdates = cleanProfileData(updates);
 
   if (Object.keys(safeUpdates).length === 0) {
-    throw new Error("No valid profile changes were provided.");
+    throw new Error(
+      "No valid profile information was supplied."
+    );
   }
 
   safeUpdates.updatedAt = serverTimestamp();
 
-  await updateDoc(doc(db, "users", uid), safeUpdates);
+  const userReference = getUsersCollectionReference(uid);
 
-  if (safeUpdates.displayName) {
-    await updateProfile(currentUser, {
-      displayName: safeUpdates.displayName
-    });
-  }
+  await updateDoc(
+    userReference,
+    safeUpdates
+  );
 
   return true;
 }
 
-
-/* =========================================
-   11. EXPORT FIREBASE SERVICES
-========================================= */
+// ============================================
+// EXPORT FIREBASE SERVICES
+// ============================================
 
 export {
   app,
   auth,
   db,
+  persistenceReady,
+
   registerUser,
   loginUser,
   logoutUser,
   observeAuth,
-  getUserProfile,
-  createUserProfile,
-  updateUserProfile
-};
 
-
-/* =========================================
-   12. OPTIONAL GLOBAL ACCESS
-========================================= */
-
-window.DarjFirebase = {
-  app,
-  auth,
-  db,
-  registerUser,
-  loginUser,
-  logoutUser,
-  observeAuth,
   getUserProfile,
   createUserProfile,
   updateUserProfile
