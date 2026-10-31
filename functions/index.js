@@ -21,7 +21,11 @@ const {
 const { defineString } = require("firebase-functions/params");
 const { setGlobalOptions } = require("firebase-functions/v2");
 
+// Initialise Firebase Admin before loading owner.js.
 initializeApp();
+
+// Owner and additional Super Admin management
+const ownerFunctions = require("./owner");
 
 const db = getFirestore();
 const adminAuth = getAuth();
@@ -210,14 +214,10 @@ async function updateUserStatus(
   };
 }
 
-function validateTripRequestData(data) {
-  if (!data || typeof data !== "object") {
-    throw new HttpsError("invalid-argument", "Invalid request data.");
-  }
-}
-
 // ======================================================
 // INITIAL SUPER ADMIN BOOTSTRAP
+// Retained for compatibility with existing deployment.
+// The owner.js bootstrap export below takes precedence.
 // ======================================================
 
 exports.bootstrapSuperAdmin = onCall(async (request) => {
@@ -249,14 +249,13 @@ exports.bootstrapSuperAdmin = onCall(async (request) => {
 
   const lockRef = db.collection("system").doc("superAdminBootstrap");
 
-  // A reservation is never silently deleted after an error.
   await db.runTransaction(async (transaction) => {
     const lock = await transaction.get(lockRef);
 
     if (lock.exists) {
       throw new HttpsError(
         "already-exists",
-        "Super Admin bootstrap has already been reserved or completed. Contact support if setup was interrupted."
+        "Super Admin bootstrap has already been reserved or completed."
       );
     }
 
@@ -329,7 +328,6 @@ exports.bootstrapSuperAdmin = onCall(async (request) => {
   } catch (error) {
     console.error("Super Admin bootstrap failed:", error);
 
-    // Preserve the lock for investigation. Never delete it automatically.
     await lockRef.update({
       status: "failed",
       failureRecordedAt: FieldValue.serverTimestamp(),
@@ -342,7 +340,7 @@ exports.bootstrapSuperAdmin = onCall(async (request) => {
 
     throw new HttpsError(
       "internal",
-      "Super Admin setup was interrupted. The bootstrap lock was preserved for safe investigation."
+      "Super Admin setup was interrupted. The bootstrap lock was preserved."
     );
   }
 });
@@ -448,6 +446,7 @@ exports.suspendUser = onCall(async (request) => {
 
   const { data: profile } = await requireUserProfile(uid);
   const target = await getUserRecord(uid);
+
   const targetIsAdmin =
     target.customClaims?.admin === true ||
     target.customClaims?.superadmin === true;
@@ -755,7 +754,6 @@ exports.createTripRequest = onCall(async (request) => {
 
 // ======================================================
 // ASSIGN DRIVER
-// Only the trip poster or an Admin may assign.
 // ======================================================
 
 exports.assignDriver = onCall(async (request) => {
@@ -855,8 +853,6 @@ exports.assignDriver = onCall(async (request) => {
       updatedAt: FieldValue.serverTimestamp()
     });
 
-    // One payment record per trip. Settlement remains direct
-    // between the trip poster and assigned driver.
     transaction.set(paymentRef, {
       tripId,
       posterUid: trip.posterUid,
@@ -898,7 +894,6 @@ exports.assignDriver = onCall(async (request) => {
 
 // ======================================================
 // CONFIRM TRIP COMPLETION
-// Both poster and assigned driver must confirm.
 // ======================================================
 
 exports.confirmTripCompletion = onCall(async (request) => {
@@ -1079,8 +1074,6 @@ exports.restoreTrip = onCall(async (request) => {
 
 // ======================================================
 // SUPER ADMIN PERMANENT DELETION
-// Only completed or archived trips.
-// Payment and audit records are retained.
 // ======================================================
 
 exports.permanentlyDeleteCompletedTrip = onCall(async (request) => {
@@ -1373,8 +1366,6 @@ exports.manageAdminAccess = onCall(async (request) => {
 
     delete updatedClaims.admin;
 
-    await adminAuth.setCustomUserClaims(targetUid, updatedClaims);
-
     const originalRole = profile.adminAccessOriginalRole;
 
     if (!["driver", "broker"].includes(originalRole)) {
@@ -1383,6 +1374,8 @@ exports.manageAdminAccess = onCall(async (request) => {
         "The original account role is missing. Manual review is required."
       );
     }
+
+    await adminAuth.setCustomUserClaims(targetUid, updatedClaims);
 
     await ref.update({
       role: originalRole,
@@ -1406,3 +1399,20 @@ exports.manageAdminAccess = onCall(async (request) => {
       : "Administrator access revoked."
   };
 });
+
+// ======================================================
+// OWNER AND ADDITIONAL SUPER ADMIN FUNCTIONS
+// These exports replace the old bootstrap implementation.
+// ======================================================
+
+exports.bootstrapSuperAdmin =
+  ownerFunctions.bootstrapSuperAdmin;
+
+exports.addSuperAdminByEmail =
+  ownerFunctions.addSuperAdminByEmail;
+
+exports.revokeSuperAdminByEmail =
+  ownerFunctions.revokeSuperAdminByEmail;
+
+exports.listAdditionalSuperAdmins =
+  ownerFunctions.listAdditionalSuperAdmins;
