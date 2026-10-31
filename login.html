@@ -4,151 +4,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10243a">
+  <meta name="description" content="Sign in to DarjeelingHost, the driver and travel agent trip outsourcing platform.">
 
   <title>Login | DarjeelingHost</title>
-
-  <meta name="description"
-    content="Login to your DarjeelingHost driver and travel agent account.">
 
   <link rel="stylesheet" href="css/style.css">
 
   <style>
-    .login-wrapper {
-      max-width: 440px;
-      margin: 55px auto;
-      padding: 0 18px;
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f3f6fa;
+      color: #25364a;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
     }
 
-    .login-card {
-      background: #fff;
-      padding: 32px;
-      border-radius: 14px;
-      border: 1px solid #e0e6eb;
-      box-shadow: 0 8px 30px rgba(0,0,0,.06);
+    .topbar {
+      background: #10243a;
+      color: white;
+      padding: 18px 6%;
     }
 
-    .login-heading {
-      text-align: center;
-      margin-bottom: 28px;
+    .topbar a {
+      color: white;
+      text-decoration: none;
+      font-size: 21px;
+      font-weight: bold;
     }
 
-    .login-heading h1 {
-      color: #173f5f;
-      margin-bottom: 8px;
-    }
-
-    .login-heading p {
-      color: #657585;
-      font-size: 14px;
-    }
-
-    .login-form {
-      display: grid;
-      gap: 17px;
-    }
-
-    .login-form label {
+    .topbar span {
       display: block;
+      margin-top: 5px;
+      color: #c7d5e4;
+      font-size: 12px;
+      font-weight: normal;
+    }
+
+    .page {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 35px 16px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 440px;
+      background: white;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 12px 35px rgba(20, 40, 65, .07);
+    }
+
+    .auth-card h1 {
+      font-size: 26px;
+      margin: 0 0 8px;
+      color: #10243a;
+    }
+
+    .subtitle {
+      color: #718096;
       font-size: 14px;
-      font-weight: 600;
+      line-height: 1.6;
+      margin: 0 0 25px;
+    }
+
+    .field {
+      margin-bottom: 17px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: bold;
       margin-bottom: 7px;
     }
 
-    .login-form input {
+    .field input {
       width: 100%;
       padding: 13px;
-      border: 1px solid #d7dee5;
-      border-radius: 7px;
-      font-size: 15px;
-      box-sizing: border-box;
+      border: 1px solid #d8e0e9;
+      border-radius: 8px;
+      outline: none;
+      font-size: 14px;
     }
 
-    .login-form input:focus {
-      outline: 2px solid #b6d4e8;
-      border-color: #173f5f;
+    .field input:focus {
+      border-color: #1769aa;
+      box-shadow: 0 0 0 3px rgba(23, 105, 170, .1);
     }
 
-    .password-wrapper {
-      position: relative;
+    .password-wrap {
+      display: flex;
+      gap: 8px;
     }
 
-    .password-wrapper input {
-      padding-right: 75px;
+    .password-wrap input {
+      flex: 1;
+      min-width: 0;
     }
 
-    .toggle-password {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      border: none;
-      background: transparent;
-      color: #173f5f;
+    .show-password {
+      border: 1px solid #d8e0e9;
+      background: #f7f9fc;
+      border-radius: 8px;
+      padding: 0 11px;
       cursor: pointer;
       font-size: 12px;
-      font-weight: bold;
     }
 
-    .login-submit {
+    .primary-button,
+    .google-button,
+    .secondary-button {
       width: 100%;
-      padding: 14px;
-      background: #173f5f;
-      color: #fff;
-      border: none;
-      border-radius: 7px;
-      font-size: 16px;
+      padding: 13px;
+      border-radius: 8px;
+      font-size: 14px;
       font-weight: bold;
       cursor: pointer;
     }
 
-    .login-submit:hover {
-      background: #24577d;
+    .primary-button {
+      border: none;
+      color: white;
+      background: #1769aa;
+      margin-top: 5px;
     }
 
-    .login-submit:disabled {
-      opacity: .6;
-      cursor: not-allowed;
+    .primary-button:hover {
+      background: #125587;
     }
 
-    .login-footer {
-      text-align: center;
-      margin-top: 22px;
-      font-size: 14px;
-      color: #657585;
+    .google-button {
+      background: white;
+      border: 1px solid #d8e0e9;
+      color: #263445;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 17px;
     }
 
-    .login-footer a {
-      color: #173f5f;
+    .google-button:hover {
+      background: #f7f9fc;
+    }
+
+    .google-icon {
+      font-size: 19px;
       font-weight: bold;
-      text-decoration: none;
+      color: #4285f4;
     }
 
-    .login-footer a:hover {
-      text-decoration: underline;
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: #8995a4;
+      font-size: 12px;
     }
 
-    .login-message {
-      font-size: 14px;
+    .divider::before,
+    .divider::after {
+      content: "";
+      height: 1px;
+      background: #e4e9ef;
+      flex: 1;
+    }
+
+    .verification-area {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid #e8edf2;
+    }
+
+    .verification-area p {
+      font-size: 12px;
+      color: #718096;
+      line-height: 1.6;
+      margin: 0 0 10px;
+    }
+
+    .secondary-button {
+      background: #edf4fb;
+      border: 1px solid #d6e5f3;
+      color: #175b91;
+    }
+
+    .message {
+      display: none;
+      padding: 12px;
+      margin-bottom: 17px;
+      border-radius: 8px;
+      font-size: 13px;
       line-height: 1.5;
     }
 
-    .security-note {
-      margin-top: 20px;
-      padding: 12px;
-      background: #f4f7f9;
-      border-radius: 7px;
-      font-size: 12px;
-      color: #657585;
-      text-align: center;
+    .message.success {
+      display: block;
+      background: #e9f7ee;
+      color: #176b39;
     }
 
-    @media(max-width:480px) {
-      .login-wrapper {
-        margin: 30px auto;
-      }
+    .message.error {
+      display: block;
+      background: #fff0f0;
+      color: #a32c2c;
+    }
 
-      .login-card {
-        padding: 23px;
+    .message.info {
+      display: block;
+      background: #eaf3ff;
+      color: #245b91;
+    }
+
+    .auth-links {
+      text-align: center;
+      font-size: 13px;
+      margin-top: 22px;
+      color: #718096;
+      line-height: 1.9;
+    }
+
+    .auth-links a {
+      color: #1769aa;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 18px;
+      font-size: 12px;
+      color: #8995a4;
+    }
+
+    button:disabled {
+      opacity: .65;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 480px) {
+      .auth-card {
+        padding: 24px 19px;
       }
     }
   </style>
@@ -156,60 +262,49 @@
 
 <body>
 
-<header class="site-header">
-  <div class="container">
-
-    <a href="index.html" class="logo">
-      DarjeelingHost
-    </a>
-
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="index.html#about">About</a>
-      <a href="index.html#how-it-works">How It Works</a>
-      <a href="register.html">Register</a>
-    </nav>
-
-  </div>
+<header class="topbar">
+  <a href="index.html">
+    DarjeelingHost
+    <span>Driver & Travel Partner Network</span>
+  </a>
 </header>
 
+<main class="page">
 
-<main class="login-wrapper">
+  <section class="auth-card">
 
-  <div class="login-card">
+    <h1>Welcome back</h1>
 
-    <div class="login-heading">
-      <h1>Welcome Back</h1>
-      <p>Login to your DarjeelingHost account.</p>
-    </div>
+    <p class="subtitle">
+      Sign in to manage your trips and connect with
+      drivers and travel partners.
+    </p>
 
     <div
       id="authMessage"
-      class="login-message"
+      class="message"
       role="status"
       aria-live="polite"
       hidden>
     </div>
 
-    <form id="loginForm" class="login-form">
+    <form id="loginForm">
 
-      <div>
-        <label for="loginEmail">Email Address</label>
-
+      <div class="field">
+        <label for="loginEmail">Email address</label>
         <input
           type="email"
           id="loginEmail"
           name="email"
-          placeholder="Enter your email address"
-          autocomplete="username"
+          placeholder="you@example.com"
+          autocomplete="email"
           required>
       </div>
 
-      <div>
+      <div class="field">
         <label for="loginPassword">Password</label>
 
-        <div class="password-wrapper">
-
+        <div class="password-wrap">
           <input
             type="password"
             id="loginPassword"
@@ -220,70 +315,64 @@
 
           <button
             type="button"
-            class="toggle-password"
-            id="togglePassword">
-            SHOW
+            class="show-password"
+            data-toggle-password="loginPassword">
+            Show
           </button>
-
         </div>
       </div>
 
       <button
         type="submit"
-        class="login-submit">
-        Login
+        class="primary-button">
+        Sign In
       </button>
 
     </form>
 
-    <div class="login-footer">
+    <div class="divider">OR</div>
+
+    <button
+      type="button"
+      id="googleLogin"
+      class="google-button">
+      <span class="google-icon">G</span>
+      Continue with Google
+    </button>
+
+    <div class="verification-area">
+
+      <p>
+        Have you registered but not received your
+        verification email? Sign in first, then request
+        another verification email.
+      </p>
+
+      <button
+        type="button"
+        id="resendVerification"
+        class="secondary-button">
+        Resend Verification Email
+      </button>
+
+    </div>
+
+    <div class="auth-links">
       Don't have an account?
-      <a href="register.html">Create Account</a>
+      <a href="register.html">Create an account</a>
+      <br>
+      <a href="index.html">Back to home</a>
     </div>
 
-    <div class="security-note">
-      Your account must be approved by the platform
-      administrator before you can access the dashboard.
-    </div>
-
-  </div>
+  </section>
 
 </main>
 
-
-<footer class="site-footer">
-  <div class="container">
-    <p>
-      © <span data-current-year></span>
-      DarjeelingHost. All rights reserved.
-    </p>
-  </div>
+<footer class="footer">
+  DarjeelingHost V1 · Driver & Travel Partner Network
 </footer>
 
-
-<script>
-  const passwordInput =
-    document.getElementById("loginPassword");
-
-  const togglePassword =
-    document.getElementById("togglePassword");
-
-  togglePassword.addEventListener("click", () => {
-
-    const isPassword =
-      passwordInput.type === "password";
-
-    passwordInput.type =
-      isPassword ? "text" : "password";
-
-    togglePassword.textContent =
-      isPassword ? "HIDE" : "SHOW";
-
-  });
-</script>
-
 <script type="module" src="js/auth.js"></script>
-<script src="js/main.js"></script>
 
 </body>
 </html>
