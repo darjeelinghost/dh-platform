@@ -22,10 +22,7 @@
       padding: 20px;
     }
 
-    header h1 {
-      margin: 0;
-      font-size: 22px;
-    }
+    header h1 { margin: 0; font-size: 22px; }
 
     header p {
       margin: 6px 0 0;
@@ -50,6 +47,12 @@
       margin-top: 0;
       color: #102b46;
       font-size: 19px;
+    }
+
+    p {
+      line-height: 1.6;
+      color: #65758a;
+      font-size: 14px;
     }
 
     label {
@@ -83,13 +86,8 @@
       cursor: not-allowed;
     }
 
-    .danger {
-      background: #b83232;
-    }
-
-    .secondary {
-      background: #526579;
-    }
+    .danger { background: #b83232; }
+    .secondary { background: #526579; }
 
     .message {
       display: none;
@@ -122,8 +120,9 @@
       background: #edf4fb;
       border-radius: 8px;
       padding: 14px;
-      line-height: 1.7;
+      line-height: 1.8;
       font-size: 14px;
+      overflow-wrap: anywhere;
     }
 
     .admin-item {
@@ -133,15 +132,13 @@
       gap: 12px;
       border-bottom: 1px solid #e8edf2;
       padding: 14px 0;
-      overflow-wrap: anywhere;
     }
 
-    .admin-item:last-child {
-      border-bottom: 0;
-    }
+    .admin-item:last-child { border-bottom: 0; }
 
     .admin-email {
       font-weight: bold;
+      overflow-wrap: anywhere;
     }
 
     .admin-status {
@@ -150,9 +147,7 @@
       margin-top: 5px;
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
     .actions {
       display: flex;
@@ -173,9 +168,7 @@
         flex-direction: column;
       }
 
-      .card {
-        padding: 17px;
-      }
+      .card { padding: 17px; }
     }
   </style>
 </head>
@@ -189,10 +182,13 @@
 
 <main>
 
-  <div id="pageMessage" class="message" role="status"></div>
+  <div id="pageMessage"
+       class="message"
+       role="status"
+       aria-live="polite"></div>
 
   <section id="loadingCard" class="card">
-    Checking owner permissions...
+    Checking your account...
   </section>
 
   <div id="ownerContent" class="hidden">
@@ -201,23 +197,37 @@
       <h2>Primary Owner</h2>
 
       <div class="owner-info">
-        <strong>Owner account:</strong>
-        <div id="ownerEmail">darjeelinghost@gmail.com</div>
+        <strong>Protected owner email:</strong>
+        <div>darjeelinghost@gmail.com</div>
 
-        <strong>Access:</strong>
-        <div>Primary Owner — protected</div>
-
-        <strong>Signed in as:</strong>
+        <strong>Signed-in account:</strong>
         <div id="signedInEmail"></div>
+
+        <strong>Access level:</strong>
+        <div id="ownerStatus">Checking...</div>
       </div>
     </section>
 
-    <section class="card">
-      <h2>Add Super Admin</h2>
+    <section class="card" id="bootstrapCard">
+      <h2>Initialise Primary Owner</h2>
 
       <p>
-        The person must already have a registered,
-        active DarjeelingHost account with a verified email.
+        Use this only for the initial setup of the primary owner
+        account. It requires the matching owner UID configured
+        in Firebase Functions and a verified owner email.
+      </p>
+
+      <button id="bootstrapButton" type="button">
+        Initialise Owner Access
+      </button>
+    </section>
+
+    <section class="card" id="managementCard">
+      <h2>Add Additional Super Admin</h2>
+
+      <p>
+        The person must already have a registered, active
+        DarjeelingHost account with a verified email.
       </p>
 
       <form id="addAdminForm">
@@ -236,12 +246,13 @@
       </form>
     </section>
 
-    <section class="card">
+    <section class="card" id="listCard">
       <h2>Additional Super Admins</h2>
 
       <p>
-        The primary owner can revoke additional Super Admin
-        access. The primary owner account cannot be revoked here.
+        Only the primary owner can revoke additional
+        Super Admin access. The primary owner cannot
+        be removed through this page.
       </p>
 
       <div class="actions">
@@ -251,7 +262,7 @@
       </div>
 
       <div id="adminList" style="margin-top:15px">
-        Loading administrators...
+        Sign in and initialise owner access first.
       </div>
     </section>
 
