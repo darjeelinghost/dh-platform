@@ -4,172 +4,288 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10243a">
+  <meta name="description" content="Create a DarjeelingHost driver or travel partner account.">
 
-  <title>Create Account | DarjeelingHost</title>
-
-  <meta name="description"
-    content="Register as a driver or travel agent with DarjeelingHost.">
+  <title>Register | DarjeelingHost</title>
 
   <link rel="stylesheet" href="css/style.css">
 
   <style>
-    .register-wrapper {
-      max-width: 520px;
-      margin: 40px auto;
-      padding: 0 18px;
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f3f6fa;
+      color: #25364a;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
     }
 
-    .register-card {
-      background: #fff;
-      padding: 30px;
-      border-radius: 14px;
-      border: 1px solid #e0e6eb;
-      box-shadow: 0 8px 30px rgba(0,0,0,.06);
+    .topbar {
+      background: #10243a;
+      color: white;
+      padding: 18px 6%;
     }
 
-    .register-heading {
-      text-align: center;
-      margin-bottom: 25px;
+    .topbar a {
+      color: white;
+      text-decoration: none;
+      font-size: 21px;
+      font-weight: bold;
     }
 
-    .register-heading h1 {
-      color: #173f5f;
-      margin-bottom: 8px;
-    }
-
-    .register-heading p {
-      color: #657585;
-      font-size: 14px;
-    }
-
-    .register-form {
-      display: grid;
-      gap: 16px;
-    }
-
-    .form-group label {
+    .topbar span {
       display: block;
-      font-weight: 600;
+      margin-top: 5px;
+      color: #c7d5e4;
+      font-size: 12px;
+      font-weight: normal;
+    }
+
+    .page {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 35px 16px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 510px;
+      background: white;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 12px 35px rgba(20, 40, 65, .07);
+    }
+
+    .auth-card h1 {
+      font-size: 26px;
+      margin: 0 0 8px;
+      color: #10243a;
+    }
+
+    .subtitle {
+      color: #718096;
       font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 23px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: bold;
       margin-bottom: 7px;
     }
 
-    .form-group input,
-    .form-group select {
+    .field input,
+    .field select {
       width: 100%;
-      padding: 12px;
-      border: 1px solid #d7dee5;
-      border-radius: 7px;
-      font-size: 15px;
-      box-sizing: border-box;
-      background: #fff;
+      padding: 13px;
+      border: 1px solid #d8e0e9;
+      border-radius: 8px;
+      background: white;
+      outline: none;
+      font-size: 14px;
     }
 
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: 2px solid #b6d4e8;
-      border-color: #173f5f;
+    .field input:focus,
+    .field select:focus {
+      border-color: #1769aa;
+      box-shadow: 0 0 0 3px rgba(23, 105, 170, .1);
     }
 
-    .password-wrapper {
-      position: relative;
+    .field small {
+      display: block;
+      color: #8995a4;
+      font-size: 11px;
+      margin-top: 6px;
     }
 
-    .password-wrapper input {
-      padding-right: 75px;
+    .two-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
-    .toggle-password {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      border: none;
-      background: transparent;
-      color: #173f5f;
+    .password-wrap {
+      display: flex;
+      gap: 8px;
+    }
+
+    .password-wrap input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .show-password {
+      border: 1px solid #d8e0e9;
+      background: #f7f9fc;
+      border-radius: 8px;
+      padding: 0 10px;
       cursor: pointer;
       font-size: 12px;
-      font-weight: bold;
     }
 
-    .terms-row {
+    .primary-button,
+    .google-button {
+      width: 100%;
+      padding: 13px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .primary-button {
+      border: none;
+      color: white;
+      background: #1769aa;
+      margin-top: 7px;
+    }
+
+    .primary-button:hover {
+      background: #125587;
+    }
+
+    .google-button {
+      background: white;
+      border: 1px solid #d8e0e9;
+      color: #263445;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 17px;
+    }
+
+    .google-button:hover {
+      background: #f7f9fc;
+    }
+
+    .google-icon {
+      font-size: 19px;
+      font-weight: bold;
+      color: #4285f4;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: #8995a4;
+      font-size: 12px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      height: 1px;
+      background: #e4e9ef;
+      flex: 1;
+    }
+
+    .terms {
       display: flex;
       align-items: flex-start;
       gap: 9px;
-      font-size: 13px;
-      line-height: 1.5;
-      color: #526575;
+      margin: 18px 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #66758a;
     }
 
-    .terms-row input {
+    .terms input {
       margin-top: 3px;
     }
 
-    .terms-row a {
-      color: #173f5f;
-    }
-
-    .register-submit {
-      width: 100%;
-      padding: 14px;
-      background: #173f5f;
-      color: #fff;
-      border: none;
-      border-radius: 7px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .register-submit:hover {
-      background: #24577d;
-    }
-
-    .register-submit:disabled {
-      opacity: .6;
-      cursor: not-allowed;
-    }
-
-    .register-footer {
-      text-align: center;
-      margin-top: 22px;
-      font-size: 14px;
-      color: #657585;
-    }
-
-    .register-footer a {
-      color: #173f5f;
-      font-weight: bold;
+    .terms a {
+      color: #1769aa;
       text-decoration: none;
     }
 
-    .register-footer a:hover {
-      text-decoration: underline;
+    .approval-note {
+      background: #f0f6fc;
+      border-left: 4px solid #1769aa;
+      padding: 13px;
+      border-radius: 5px;
+      margin-top: 19px;
+      color: #35536f;
+      font-size: 12px;
+      line-height: 1.6;
     }
 
-    .approval-note {
-      background: #f4f7f9;
+    .message {
+      display: none;
+      padding: 12px;
+      margin-bottom: 17px;
       border-radius: 8px;
-      padding: 13px;
-      margin-top: 18px;
       font-size: 13px;
-      color: #526575;
       line-height: 1.5;
     }
 
-    .password-hint {
-      color: #657585;
-      font-size: 12px;
-      margin-top: 5px;
+    .message.success {
+      display: block;
+      background: #e9f7ee;
+      color: #176b39;
     }
 
-    @media(max-width:480px) {
-      .register-wrapper {
-        margin: 25px auto;
+    .message.error {
+      display: block;
+      background: #fff0f0;
+      color: #a32c2c;
+    }
+
+    .message.info {
+      display: block;
+      background: #eaf3ff;
+      color: #245b91;
+    }
+
+    .auth-links {
+      text-align: center;
+      font-size: 13px;
+      margin-top: 21px;
+      color: #718096;
+      line-height: 1.9;
+    }
+
+    .auth-links a {
+      color: #1769aa;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 18px;
+      font-size: 12px;
+      color: #8995a4;
+    }
+
+    button:disabled {
+      opacity: .65;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 520px) {
+      .auth-card {
+        padding: 24px 19px;
       }
 
-      .register-card {
-        padding: 22px;
+      .two-columns {
+        grid-template-columns: 1fr;
+        gap: 0;
       }
     }
   </style>
@@ -177,152 +293,125 @@
 
 <body>
 
-<header class="site-header">
-  <div class="container">
-
-    <a href="index.html" class="logo">
-      DarjeelingHost
-    </a>
-
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="index.html#about">About</a>
-      <a href="index.html#how-it-works">How It Works</a>
-      <a href="login.html">Login</a>
-    </nav>
-
-  </div>
+<header class="topbar">
+  <a href="index.html">
+    DarjeelingHost
+    <span>Driver & Travel Partner Network</span>
+  </a>
 </header>
 
+<main class="page">
 
-<main class="register-wrapper">
+  <section class="auth-card">
 
-  <div class="register-card">
+    <h1>Create your account</h1>
 
-    <div class="register-heading">
-      <h1>Create Your Account</h1>
-      <p>Join the DarjeelingHost trip outsourcing network.</p>
-    </div>
+    <p class="subtitle">
+      Join the DarjeelingHost network as a driver
+      or travel agent/broker.
+    </p>
 
     <div
       id="authMessage"
+      class="message"
       role="status"
       aria-live="polite"
       hidden>
     </div>
 
-    <form id="registerForm" class="register-form">
+    <form id="registerForm">
 
-      <div class="form-group">
-        <label for="fullName">Full Name *</label>
-
+      <div class="field">
+        <label for="fullName">Full name</label>
         <input
           type="text"
           id="fullName"
           name="fullName"
           placeholder="Enter your full name"
           autocomplete="name"
-          maxlength="100"
           required>
       </div>
 
-
-      <div class="form-group">
-        <label for="registerEmail">Email Address *</label>
-
+      <div class="field">
+        <label for="registerEmail">Email address</label>
         <input
           type="email"
           id="registerEmail"
           name="email"
-          placeholder="Enter your email address"
+          placeholder="you@example.com"
           autocomplete="email"
-          maxlength="254"
           required>
       </div>
 
+      <div class="two-columns">
 
-      <div class="form-group">
-        <label for="phone">Phone Number *</label>
+        <div class="field">
+          <label for="phone">Phone number</label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            placeholder="Phone number"
+            autocomplete="tel"
+            required>
+        </div>
 
-        <input
-          type="tel"
-          id="phone"
-          name="phone"
-          placeholder="Enter your phone number"
-          autocomplete="tel"
-          maxlength="25"
-          required>
+        <div class="field">
+          <label for="whatsapp">WhatsApp number</label>
+          <input
+            type="tel"
+            id="whatsapp"
+            name="whatsapp"
+            placeholder="WhatsApp number">
+        </div>
+
       </div>
 
-
-      <div class="form-group">
-        <label for="whatsapp">WhatsApp Number</label>
-
-        <input
-          type="tel"
-          id="whatsapp"
-          name="whatsapp"
-          placeholder="Enter WhatsApp number"
-          maxlength="25">
-      </div>
-
-
-      <div class="form-group">
-        <label for="accountType">Account Type *</label>
+      <div class="field">
+        <label for="accountType">Account type</label>
 
         <select
           id="accountType"
           name="accountType"
           required>
 
-          <option value="">Select Account Type</option>
-
-          <option value="driver">
-            Driver
-          </option>
-
-          <option value="broker">
-            Travel Agent / Broker
-          </option>
+          <option value="">Select account type</option>
+          <option value="driver">Driver</option>
+          <option value="broker">Travel Agent / Broker</option>
 
         </select>
+
+        <small>
+          Choose the account type that best describes your work.
+        </small>
       </div>
 
+      <div class="field">
+        <label for="registerPassword">Create password</label>
 
-      <div class="form-group">
-        <label for="registerPassword">Password *</label>
-
-        <div class="password-wrapper">
-
+        <div class="password-wrap">
           <input
             type="password"
             id="registerPassword"
             name="password"
-            placeholder="Create a password"
+            placeholder="Minimum 6 characters"
             autocomplete="new-password"
             minlength="6"
             required>
 
           <button
             type="button"
-            class="toggle-password"
-            data-password-target="registerPassword">
-            SHOW
+            class="show-password"
+            data-toggle-password="registerPassword">
+            Show
           </button>
-
         </div>
-
-        <p class="password-hint">
-          Minimum 6 characters.
-        </p>
       </div>
 
+      <div class="field">
+        <label for="confirmPassword">Confirm password</label>
 
-      <div class="form-group">
-        <label for="confirmPassword">Confirm Password *</label>
-
-        <div class="password-wrapper">
-
+        <div class="password-wrap">
           <input
             type="password"
             id="confirmPassword"
@@ -334,100 +423,67 @@
 
           <button
             type="button"
-            class="toggle-password"
-            data-password-target="confirmPassword">
-            SHOW
+            class="show-password"
+            data-toggle-password="confirmPassword">
+            Show
           </button>
-
         </div>
       </div>
 
-
-      <div class="terms-row">
-
+      <label class="terms">
         <input
           type="checkbox"
           id="terms"
           name="terms"
           required>
 
-        <label for="terms">
-          I agree to the DarjeelingHost
-          <a href="terms.html">Terms and Conditions</a>
-          and
-          <a href="privacy.html">Privacy Policy</a>.
-        </label>
-
-      </div>
-
+        <span>
+          I agree to the DarjeelingHost terms and conditions
+          and privacy policy.
+        </span>
+      </label>
 
       <button
         type="submit"
-        class="register-submit">
+        class="primary-button">
         Create Account
       </button>
 
     </form>
 
+    <div class="divider">OR</div>
+
+    <button
+      type="button"
+      id="googleRegister"
+      class="google-button">
+      <span class="google-icon">G</span>
+      Register with Google
+    </button>
 
     <div class="approval-note">
       <strong>Account approval:</strong>
-      All new driver and travel agent accounts are initially
-      pending. An administrator must review and approve
-      your registration before you can use the platform.
+      All new accounts require administrator approval.
+      Email registration also requires email verification
+      before platform access.
     </div>
 
-
-    <div class="register-footer">
+    <div class="auth-links">
       Already registered?
-      <a href="login.html">Login Here</a>
+      <a href="login.html">Sign in</a>
+      <br>
+      <a href="index.html">Back to home</a>
     </div>
 
-  </div>
+  </section>
 
 </main>
 
-
-<footer class="site-footer">
-  <div class="container">
-    <p>
-      © <span data-current-year></span>
-      DarjeelingHost. All rights reserved.
-    </p>
-  </div>
+<footer class="footer">
+  DarjeelingHost V1 · Driver & Travel Partner Network
 </footer>
 
-
-<script>
-  document.querySelectorAll("[data-password-target]")
-    .forEach(button => {
-
-      button.addEventListener("click", () => {
-
-        const targetId =
-          button.dataset.passwordTarget;
-
-        const input =
-          document.getElementById(targetId);
-
-        if (!input) return;
-
-        const showPassword =
-          input.type === "password";
-
-        input.type =
-          showPassword ? "text" : "password";
-
-        button.textContent =
-          showPassword ? "HIDE" : "SHOW";
-
-      });
-
-    });
-</script>
-
 <script type="module" src="js/auth.js"></script>
-<script src="js/main.js"></script>
 
 </body>
 </html>
