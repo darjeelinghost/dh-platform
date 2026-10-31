@@ -2,15 +2,12 @@
 "use strict";
 
 // ======================================================
-// DARJEELINGHOST V1 - TRUSTED FIREBASE BACKEND
+// DARJEELINGHOST V1 - SECURE FIREBASE BACKEND
+// Firebase Functions v2 + Firebase Admin SDK
 // ======================================================
 
 const { initializeApp } = require("firebase-admin/app");
-
-const {
-  getAuth
-} = require("firebase-admin/auth");
-
+const { getAuth } = require("firebase-admin/auth");
 const {
   getFirestore,
   FieldValue
@@ -21,15 +18,8 @@ const {
   HttpsError
 } = require("firebase-functions/v2/https");
 
-const {
-  defineString
-} = require("firebase-functions/params");
-
+const { defineString } = require("firebase-functions/params");
 const { setGlobalOptions } = require("firebase-functions/v2");
-
-// ======================================================
-// INITIALISATION
-// ======================================================
 
 initializeApp();
 
@@ -41,19 +31,21 @@ setGlobalOptions({
   maxInstances: 10
 });
 
-// Configure this with your actual Firebase Authentication UID.
 const OWNER_UID = defineString("DH_OWNER_UID");
 
 // ======================================================
 // SHARED HELPERS
 // ======================================================
 
+function dataOf(request) {
+  return request.data && typeof request.data === "object"
+    ? request.data
+    : {};
+}
+
 function requireAuth(request) {
   if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "Please sign in first."
-    );
+    throw new HttpsError("unauthenticated", "Please sign in first.");
   }
 
   return request.auth;
@@ -61,11 +53,10 @@ function requireAuth(request) {
 
 function requireAdmin(request) {
   const auth = requireAuth(request);
-  const claims = auth.token || {};
 
   if (
-    claims.admin !== true &&
-    claims.superadmin !== true
+    auth.token.admin !== true &&
+    auth.token.superadmin !== true
   ) {
     throw new HttpsError(
       "permission-denied",
@@ -89,30 +80,28 @@ function requireSuperAdmin(request) {
   return auth;
 }
 
-function requireString(value, field) {
+function requireString(value, field, maxLength = 500) {
   if (
     typeof value !== "string" ||
-    value.trim().length === 0
+    value.trim().length === 0 ||
+    value.trim().length > maxLength
   ) {
     throw new HttpsError(
       "invalid-argument",
-      `${field} is required.`
+      `${field} is required and must not exceed ${maxLength} characters.`
     );
   }
 
   return value.trim();
 }
 
-function requireAmount(value) {
+function requireAmount(value, field = "Amount") {
   const amount = Number(value);
 
-  if (
-    !Number.isFinite(amount) ||
-    amount < 0
-  ) {
+  if (!Number.isFinite(amount) || amount < 0) {
     throw new HttpsError(
       "invalid-argument",
-      "A valid non-negative amount is required."
+      `${field} must be a valid non-negative amount.`
     );
   }
 
@@ -129,10 +118,11 @@ async function getUserRecord(uid) {
   try {
     return await adminAuth.getUser(uid);
   } catch (error) {
-    throw new HttpsError(
-      "not-found",
-      "The requested authentication account was not found."
-    );
+    if (error.code === "auth/user-not-found") {
+      throw new HttpsError("not-found", "Authentication account not found.");
+    }
+
+    throw error;
   }
 }
 
@@ -141,16 +131,34 @@ async function requireUserProfile(uid) {
   const snapshot = await ref.get();
 
   if (!snapshot.exists) {
-    throw new HttpsError(
-      "not-found",
-      "User profile not found."
-    );
+    throw new HttpsError("not-found", "User profile not found.");
   }
 
   return {
     ref,
     data: snapshot.data()
   };
+}
+
+async function requireActiveUser(uid) {
+  const user = await getUserRecord(uid);
+  const { data } = await requireUserProfile(uid);
+
+  if (!user.emailVerified) {
+    throw new HttpsError(
+      "failed-precondition",
+      "The account email must be verified."
+    );
+  }
+
+  if (data.status !== "active") {
+    throw new HttpsError(
+      "permission-denied",
+      "The account is not active."
+    );
+  }
+
+  return { user, profile: data };
 }
 
 async function writeAuditLog(
@@ -191,13 +199,10 @@ async function updateUserStatus(
     statusReason: reason
   });
 
-  await writeAuditLog(
-    actor,
-    action,
-    "user",
-    uid,
-    { status, reason }
-  );
+  await writeAuditLog(actor, action, "user", uid, {
+    status,
+    reason
+  });
 
   return {
     success: true,
@@ -205,151 +210,142 @@ async function updateUserStatus(
   };
 }
 
+function validateTripRequestData(data) {
+  if (!data || typeof data !== "object") {
+    throw new HttpsError("invalid-argument", "Invalid request data.");
+  }
+}
+
 // ======================================================
-// FIRST SUPER ADMIN BOOTSTRAP
+// INITIAL SUPER ADMIN BOOTSTRAP
 // ======================================================
 
-// This function is restricted to the exact UID configured
-// through DH_OWNER_UID. It can succeed only once.
-//
-// The owner must have a verified Firebase Auth email.
-// Do not put a service-account key or bootstrap password
-// in this repository.
+exports.bootstrapSuperAdmin = onCall(async (request) => {
+  const auth = requireAuth(request);
+  const configuredOwnerUid = OWNER_UID.value();
 
-exports.bootstrapSuperAdmin = onCall(
-  async (request) => {
-    const auth = requireAuth(request);
-    const configuredOwnerUid = OWNER_UID.value();
-
-    if (!configuredOwnerUid) {
-      throw new HttpsError(
-        "failed-precondition",
-        "The owner UID has not been configured."
-      );
-    }
-
-    if (auth.uid !== configuredOwnerUid) {
-      throw new HttpsError(
-        "permission-denied",
-        "This account is not authorised for initial setup."
-      );
-    }
-
-    if (auth.token.email_verified !== true) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Verify your email address before setting up Super Admin."
-      );
-    }
-
-    const lockRef = db.collection("system").doc(
-      "superAdminBootstrap"
+  if (!configuredOwnerUid) {
+    throw new HttpsError(
+      "failed-precondition",
+      "The owner UID has not been configured."
     );
+  }
 
-    // Atomically reserve the one-time bootstrap.
-    await db.runTransaction(async (transaction) => {
-      const lock = await transaction.get(lockRef);
+  if (auth.uid !== configuredOwnerUid) {
+    throw new HttpsError(
+      "permission-denied",
+      "This account is not authorised for initial setup."
+    );
+  }
 
-      if (lock.exists) {
-        throw new HttpsError(
-          "already-exists",
-          "The initial Super Admin setup has already been used."
-        );
-      }
+  const user = await getUserRecord(auth.uid);
 
-      transaction.create(lockRef, {
-        ownerUid: auth.uid,
-        status: "initialising",
-        createdAt: FieldValue.serverTimestamp()
-      });
+  if (!user.emailVerified) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Verify your email before setting up Super Admin."
+    );
+  }
+
+  const lockRef = db.collection("system").doc("superAdminBootstrap");
+
+  // A reservation is never silently deleted after an error.
+  await db.runTransaction(async (transaction) => {
+    const lock = await transaction.get(lockRef);
+
+    if (lock.exists) {
+      throw new HttpsError(
+        "already-exists",
+        "Super Admin bootstrap has already been reserved or completed. Contact support if setup was interrupted."
+      );
+    }
+
+    transaction.create(lockRef, {
+      ownerUid: auth.uid,
+      status: "initialising",
+      createdAt: FieldValue.serverTimestamp()
+    });
+  });
+
+  try {
+    const existingClaims = user.customClaims || {};
+
+    await adminAuth.setCustomUserClaims(auth.uid, {
+      ...existingClaims,
+      admin: true,
+      superadmin: true
     });
 
-    try {
-      const user = await getUserRecord(auth.uid);
+    const userRef = db.collection("users").doc(auth.uid);
+    const profile = await userRef.get();
 
-      if (!user.emailVerified) {
-        throw new HttpsError(
-          "failed-precondition",
-          "The Firebase Authentication email must be verified."
-        );
-      }
+    const profileData = {
+      uid: auth.uid,
+      email: user.email || auth.token.email || "",
+      displayName: profile.exists
+        ? profile.data().displayName || user.displayName || "Platform Owner"
+        : user.displayName || "Platform Owner",
+      role: "superadmin",
+      status: "active",
+      verificationStatus: "verified",
+      updatedAt: FieldValue.serverTimestamp()
+    };
 
-      const existingClaims = user.customClaims || {};
-
-      await adminAuth.setCustomUserClaims(auth.uid, {
-        ...existingClaims,
-        admin: true,
-        superadmin: true
-      });
-
-      const userRef = db.collection("users").doc(auth.uid);
-      const profile = await userRef.get();
-
-      const profileData = {
-        uid: auth.uid,
-        email: user.email || auth.token.email || "",
-        displayName:
-          profile.exists
-            ? profile.data().displayName || user.displayName || "Platform Owner"
-            : user.displayName || "Platform Owner",
-        role: "superadmin",
-        status: "active",
-        verificationStatus: "verified",
-        updatedAt: FieldValue.serverTimestamp()
-      };
-
-      if (profile.exists) {
-        await userRef.update(profileData);
-      } else {
-        await userRef.set({
-          ...profileData,
-          phone: user.phoneNumber || "",
-          whatsapp: "",
-          createdAt: FieldValue.serverTimestamp()
-        });
-      }
-
-      await db.collection("auditLogs").add({
-        actorUid: auth.uid,
-        actorEmail: user.email || null,
-        actorRole: "superadmin",
-        action: "bootstrapSuperAdmin",
-        targetType: "user",
-        targetId: auth.uid,
-        details: {
-          description: "Initial Super Admin setup"
-        },
+    if (profile.exists) {
+      await userRef.update(profileData);
+    } else {
+      await userRef.set({
+        ...profileData,
+        phone: user.phoneNumber || "",
+        whatsapp: "",
         createdAt: FieldValue.serverTimestamp()
       });
-
-      await lockRef.update({
-        status: "completed",
-        completedAt: FieldValue.serverTimestamp()
-      });
-
-      return {
-        success: true,
-        message: "Initial Super Admin setup completed."
-      };
-
-    } catch (error) {
-      // Release the reservation if setup failed.
-      // A successful setup leaves the lock permanently in place.
-      await lockRef.delete().catch(() => {});
-
-      console.error("Super Admin bootstrap failed:", error);
-
-      if (error instanceof HttpsError) {
-        throw error;
-      }
-
-      throw new HttpsError(
-        "internal",
-        "Super Admin setup could not be completed."
-      );
     }
+
+    await writeAuditLog(
+      {
+        uid: auth.uid,
+        token: {
+          email: user.email || null,
+          superadmin: true
+        }
+      },
+      "bootstrapSuperAdmin",
+      "user",
+      auth.uid,
+      { description: "Initial Super Admin setup" }
+    );
+
+    await lockRef.update({
+      status: "completed",
+      completedAt: FieldValue.serverTimestamp()
+    });
+
+    return {
+      success: true,
+      message: "Initial Super Admin setup completed. Refresh your authentication token."
+    };
+
+  } catch (error) {
+    console.error("Super Admin bootstrap failed:", error);
+
+    // Preserve the lock for investigation. Never delete it automatically.
+    await lockRef.update({
+      status: "failed",
+      failureRecordedAt: FieldValue.serverTimestamp(),
+      failureCode: error.code || "unknown"
+    }).catch((lockError) => {
+      console.error("Could not update bootstrap lock:", lockError);
+    });
+
+    if (error instanceof HttpsError) throw error;
+
+    throw new HttpsError(
+      "internal",
+      "Super Admin setup was interrupted. The bootstrap lock was preserved for safe investigation."
+    );
   }
-);
+});
 
 // ======================================================
 // APPROVE USER
@@ -357,14 +353,30 @@ exports.bootstrapSuperAdmin = onCall(
 
 exports.approveUser = onCall(async (request) => {
   const actor = requireAdmin(request);
-  const uid = requireString(request.data.userId, "User ID");
+  const data = dataOf(request);
+  const uid = requireString(data.userId, "User ID");
 
-  const { ref, data } = await requireUserProfile(uid);
+  const user = await getUserRecord(uid);
+  const { ref, data: profile } = await requireUserProfile(uid);
 
-  if (!["driver", "broker"].includes(data.role)) {
+  if (!user.emailVerified) {
     throw new HttpsError(
       "failed-precondition",
-      "Only driver and broker accounts can be approved here."
+      "The user must verify their email before approval."
+    );
+  }
+
+  if (!["driver", "broker"].includes(profile.role)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Only Driver and Broker accounts can be approved here."
+    );
+  }
+
+  if (!["pending", "rejected"].includes(profile.status)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This account is not awaiting approval."
     );
   }
 
@@ -375,12 +387,7 @@ exports.approveUser = onCall(async (request) => {
     updatedAt: FieldValue.serverTimestamp()
   });
 
-  await writeAuditLog(
-    actor,
-    "approveUser",
-    "user",
-    uid
-  );
+  await writeAuditLog(actor, "approveUser", "user", uid);
 
   return {
     success: true,
@@ -394,11 +401,18 @@ exports.approveUser = onCall(async (request) => {
 
 exports.rejectUser = onCall(async (request) => {
   const actor = requireAdmin(request);
-  const uid = requireString(request.data.userId, "User ID");
+  const data = dataOf(request);
+  const uid = requireString(data.userId, "User ID");
+  const reason = getReason(data);
 
-  const reason = getReason(request.data);
+  const { ref, data: profile } = await requireUserProfile(uid);
 
-  const { ref } = await requireUserProfile(uid);
+  if (!["driver", "broker"].includes(profile.role)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This operation is only for Driver and Broker accounts."
+    );
+  }
 
   await ref.update({
     status: "rejected",
@@ -408,13 +422,7 @@ exports.rejectUser = onCall(async (request) => {
     updatedAt: FieldValue.serverTimestamp()
   });
 
-  await writeAuditLog(
-    actor,
-    "rejectUser",
-    "user",
-    uid,
-    { reason }
-  );
+  await writeAuditLog(actor, "rejectUser", "user", uid, { reason });
 
   return {
     success: true,
@@ -428,7 +436,8 @@ exports.rejectUser = onCall(async (request) => {
 
 exports.suspendUser = onCall(async (request) => {
   const actor = requireAdmin(request);
-  const uid = requireString(request.data.userId, "User ID");
+  const data = dataOf(request);
+  const uid = requireString(data.userId, "User ID");
 
   if (uid === actor.uid) {
     throw new HttpsError(
@@ -437,15 +446,30 @@ exports.suspendUser = onCall(async (request) => {
     );
   }
 
-  const { data } = await requireUserProfile(uid);
+  const { data: profile } = await requireUserProfile(uid);
+  const target = await getUserRecord(uid);
+  const targetIsAdmin =
+    target.customClaims?.admin === true ||
+    target.customClaims?.superadmin === true;
 
-  if (
-    data.role === "superadmin" ||
-    (await getUserRecord(uid)).customClaims?.superadmin === true
-  ) {
+  if (target.customClaims?.superadmin === true) {
     throw new HttpsError(
       "permission-denied",
-      "A Super Admin account cannot be suspended through this operation."
+      "A Super Admin cannot be suspended through this operation."
+    );
+  }
+
+  if (targetIsAdmin && actor.token.superadmin !== true) {
+    throw new HttpsError(
+      "permission-denied",
+      "Only the Super Admin can suspend another Admin."
+    );
+  }
+
+  if (profile.status === "suspended") {
+    throw new HttpsError(
+      "failed-precondition",
+      "This account is already suspended."
     );
   }
 
@@ -454,7 +478,7 @@ exports.suspendUser = onCall(async (request) => {
     uid,
     "suspended",
     "suspendUser",
-    getReason(request.data)
+    getReason(data)
   );
 });
 
@@ -464,14 +488,34 @@ exports.suspendUser = onCall(async (request) => {
 
 exports.restoreUser = onCall(async (request) => {
   const actor = requireAdmin(request);
-  const uid = requireString(request.data.userId, "User ID");
+  const data = dataOf(request);
+  const uid = requireString(data.userId, "User ID");
 
-  const { data } = await requireUserProfile(uid);
+  const { data: profile } = await requireUserProfile(uid);
+  const target = await getUserRecord(uid);
 
-  if (!["driver", "broker"].includes(data.role)) {
+  if (!["driver", "broker", "admin"].includes(profile.role)) {
     throw new HttpsError(
       "failed-precondition",
-      "This operation is only for driver or broker accounts."
+      "This account cannot be restored through this operation."
+    );
+  }
+
+  if (
+    (target.customClaims?.admin === true ||
+      target.customClaims?.superadmin === true) &&
+    actor.token.superadmin !== true
+  ) {
+    throw new HttpsError(
+      "permission-denied",
+      "Only the Super Admin can restore an Admin account."
+    );
+  }
+
+  if (!target.emailVerified) {
+    throw new HttpsError(
+      "failed-precondition",
+      "The account email must be verified."
     );
   }
 
@@ -480,7 +524,7 @@ exports.restoreUser = onCall(async (request) => {
     uid,
     "active",
     "restoreUser",
-    getReason(request.data)
+    getReason(data)
   );
 });
 
@@ -490,14 +534,22 @@ exports.restoreUser = onCall(async (request) => {
 
 exports.verifyDriver = onCall(async (request) => {
   const actor = requireAdmin(request);
-  const uid = requireString(request.data.driverId, "Driver ID");
+  const data = dataOf(request);
+  const uid = requireString(data.driverId, "Driver ID");
 
-  const { ref, data } = await requireUserProfile(uid);
+  const { ref, data: profile } = await requireUserProfile(uid);
 
-  if (data.role !== "driver") {
+  if (profile.role !== "driver") {
     throw new HttpsError(
       "failed-precondition",
       "The selected account is not a driver."
+    );
+  }
+
+  if (profile.status !== "active") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Only active drivers can be verified."
     );
   }
 
@@ -508,12 +560,7 @@ exports.verifyDriver = onCall(async (request) => {
     updatedAt: FieldValue.serverTimestamp()
   });
 
-  await writeAuditLog(
-    actor,
-    "verifyDriver",
-    "user",
-    uid
-  );
+  await writeAuditLog(actor, "verifyDriver", "user", uid);
 
   return {
     success: true,
@@ -525,47 +572,42 @@ exports.verifyDriver = onCall(async (request) => {
 // REJECT DRIVER VERIFICATION
 // ======================================================
 
-exports.rejectDriverVerification = onCall(
-  async (request) => {
-    const actor = requireAdmin(request);
-    const uid = requireString(
-      request.data.driverId,
-      "Driver ID"
+exports.rejectDriverVerification = onCall(async (request) => {
+  const actor = requireAdmin(request);
+  const data = dataOf(request);
+  const uid = requireString(data.driverId, "Driver ID");
+  const reason = getReason(data);
+
+  const { ref, data: profile } = await requireUserProfile(uid);
+
+  if (profile.role !== "driver") {
+    throw new HttpsError(
+      "failed-precondition",
+      "The selected account is not a driver."
     );
-
-    const reason = getReason(request.data);
-
-    const { ref, data } = await requireUserProfile(uid);
-
-    if (data.role !== "driver") {
-      throw new HttpsError(
-        "failed-precondition",
-        "The selected account is not a driver."
-      );
-    }
-
-    await ref.update({
-      verificationStatus: "rejected",
-      verificationReason: reason,
-      verifiedAt: FieldValue.serverTimestamp(),
-      verifiedBy: actor.uid,
-      updatedAt: FieldValue.serverTimestamp()
-    });
-
-    await writeAuditLog(
-      actor,
-      "rejectDriverVerification",
-      "user",
-      uid,
-      { reason }
-    );
-
-    return {
-      success: true,
-      message: "Driver verification rejected."
-    };
   }
-);
+
+  await ref.update({
+    verificationStatus: "rejected",
+    verificationReason: reason,
+    verifiedAt: FieldValue.serverTimestamp(),
+    verifiedBy: actor.uid,
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  await writeAuditLog(
+    actor,
+    "rejectDriverVerification",
+    "user",
+    uid,
+    { reason }
+  );
+
+  return {
+    success: true,
+    message: "Driver verification rejected."
+  };
+});
 
 // ======================================================
 // REVIEW TRIP
@@ -573,16 +615,10 @@ exports.rejectDriverVerification = onCall(
 
 exports.reviewTrip = onCall(async (request) => {
   const actor = requireAdmin(request);
+  const data = dataOf(request);
 
-  const tripId = requireString(
-    request.data.tripId,
-    "Trip ID"
-  );
-
-  const decision = requireString(
-    request.data.decision,
-    "Decision"
-  );
+  const tripId = requireString(data.tripId, "Trip ID");
+  const decision = requireString(data.decision, "Decision");
 
   if (!["approved", "rejected"].includes(decision)) {
     throw new HttpsError(
@@ -595,31 +631,373 @@ exports.reviewTrip = onCall(async (request) => {
   const snapshot = await ref.get();
 
   if (!snapshot.exists) {
+    throw new HttpsError("not-found", "Trip not found.");
+  }
+
+  if (snapshot.data().status !== "open") {
     throw new HttpsError(
-      "not-found",
-      "Trip not found."
+      "failed-precondition",
+      "Only open trips can be moderated."
     );
   }
 
   await ref.update({
     moderationStatus: decision,
-    moderationReason: getReason(request.data),
+    moderationReason: getReason(data),
     moderatedBy: actor.uid,
     moderatedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   });
 
-  await writeAuditLog(
-    actor,
-    "reviewTrip",
-    "trip",
-    tripId,
-    { decision }
-  );
+  await writeAuditLog(actor, "reviewTrip", "trip", tripId, {
+    decision
+  });
 
   return {
     success: true,
     message: `Trip ${decision}.`
+  };
+});
+
+// ======================================================
+// CREATE TRIP REQUEST
+// ======================================================
+
+exports.createTripRequest = onCall(async (request) => {
+  const auth = requireAuth(request);
+  const data = dataOf(request);
+
+  const tripId = requireString(data.tripId, "Trip ID");
+  const message = typeof data.message === "string"
+    ? data.message.trim().slice(0, 1000)
+    : "";
+
+  const driverFare = data.offeredFare === undefined ||
+    data.offeredFare === null
+    ? null
+    : requireAmount(data.offeredFare, "Offered fare");
+
+  const { profile } = await requireActiveUser(auth.uid);
+
+  if (profile.role !== "driver") {
+    throw new HttpsError(
+      "permission-denied",
+      "Only active drivers can request trips."
+    );
+  }
+
+  if (profile.verificationStatus !== "verified") {
+    throw new HttpsError(
+      "permission-denied",
+      "Your driver profile must be verified before requesting trips."
+    );
+  }
+
+  const tripRef = db.collection("trips").doc(tripId);
+  const requestRef = db.collection("tripRequests").doc();
+
+  await db.runTransaction(async (transaction) => {
+    const tripSnapshot = await transaction.get(tripRef);
+
+    if (!tripSnapshot.exists) {
+      throw new HttpsError("not-found", "Trip not found.");
+    }
+
+    const trip = tripSnapshot.data();
+
+    if (
+      trip.status !== "open" ||
+      trip.moderationStatus !== "approved"
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This trip is not currently accepting requests."
+      );
+    }
+
+    if (trip.posterUid === auth.uid) {
+      throw new HttpsError(
+        "failed-precondition",
+        "You cannot request your own trip."
+      );
+    }
+
+    transaction.create(requestRef, {
+      tripId,
+      posterUid: trip.posterUid,
+      driverUid: auth.uid,
+      driverName: profile.displayName || "",
+      message,
+      offeredFare: driverFare,
+      status: "pending",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+  });
+
+  await writeAuditLog(
+    {
+      uid: auth.uid,
+      token: { email: auth.token.email || null }
+    },
+    "createTripRequest",
+    "tripRequest",
+    requestRef.id,
+    { tripId }
+  );
+
+  return {
+    success: true,
+    requestId: requestRef.id,
+    message: "Trip request submitted."
+  };
+});
+
+// ======================================================
+// ASSIGN DRIVER
+// Only the trip poster or an Admin may assign.
+// ======================================================
+
+exports.assignDriver = onCall(async (request) => {
+  const auth = requireAuth(request);
+  const data = dataOf(request);
+
+  const tripId = requireString(data.tripId, "Trip ID");
+  const requestId = requireString(data.requestId, "Request ID");
+
+  const tripRef = db.collection("trips").doc(tripId);
+  const requestRef = db.collection("tripRequests").doc(requestId);
+  const paymentRef = db.collection("paymentRecords").doc(tripId);
+
+  let assignedDriverUid = "";
+
+  await db.runTransaction(async (transaction) => {
+    const tripSnapshot = await transaction.get(tripRef);
+    const requestSnapshot = await transaction.get(requestRef);
+
+    if (!tripSnapshot.exists || !requestSnapshot.exists) {
+      throw new HttpsError(
+        "not-found",
+        "Trip or trip request not found."
+      );
+    }
+
+    const trip = tripSnapshot.data();
+    const tripRequest = requestSnapshot.data();
+
+    const isPoster = trip.posterUid === auth.uid;
+    const isAdmin = auth.token.admin === true ||
+      auth.token.superadmin === true;
+
+    if (!isPoster && !isAdmin) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only the trip poster or an Admin can assign a driver."
+      );
+    }
+
+    if (tripRequest.tripId !== tripId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "The request does not belong to this trip."
+      );
+    }
+
+    if (trip.status !== "open" || trip.moderationStatus !== "approved") {
+      throw new HttpsError(
+        "failed-precondition",
+        "This trip is not available for assignment."
+      );
+    }
+
+    if (tripRequest.status !== "pending") {
+      throw new HttpsError(
+        "failed-precondition",
+        "This driver request is no longer pending."
+      );
+    }
+
+    const driverUid = tripRequest.driverUid;
+    const driverRef = db.collection("users").doc(driverUid);
+    const driverSnapshot = await transaction.get(driverRef);
+
+    if (!driverSnapshot.exists) {
+      throw new HttpsError("not-found", "Driver profile not found.");
+    }
+
+    const driver = driverSnapshot.data();
+
+    if (
+      driver.role !== "driver" ||
+      driver.status !== "active" ||
+      driver.verificationStatus !== "verified"
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "The selected driver is not active and verified."
+      );
+    }
+
+    assignedDriverUid = driverUid;
+
+    transaction.update(tripRef, {
+      status: "assigned",
+      assignedDriverUid: driverUid,
+      assignedDriverName: driver.displayName || "",
+      assignedRequestId: requestId,
+      assignedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+
+    transaction.update(requestRef, {
+      status: "accepted",
+      respondedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+
+    // One payment record per trip. Settlement remains direct
+    // between the trip poster and assigned driver.
+    transaction.set(paymentRef, {
+      tripId,
+      posterUid: trip.posterUid,
+      driverUid,
+      agreedFare: tripRequest.offeredFare !== null &&
+        tripRequest.offeredFare !== undefined
+        ? tripRequest.offeredFare
+        : trip.fare,
+      amountPaid: 0,
+      paymentStatus: "unpaid",
+      paymentMethod: null,
+      paymentDate: null,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+  });
+
+  await writeAuditLog(
+    {
+      uid: auth.uid,
+      token: {
+        email: auth.token.email || null,
+        admin: auth.token.admin === true,
+        superadmin: auth.token.superadmin === true
+      }
+    },
+    "assignDriver",
+    "trip",
+    tripId,
+    { requestId, assignedDriverUid }
+  );
+
+  return {
+    success: true,
+    message: "Driver assigned successfully.",
+    driverUid: assignedDriverUid
+  };
+});
+
+// ======================================================
+// CONFIRM TRIP COMPLETION
+// Both poster and assigned driver must confirm.
+// ======================================================
+
+exports.confirmTripCompletion = onCall(async (request) => {
+  const auth = requireAuth(request);
+  const data = dataOf(request);
+  const tripId = requireString(data.tripId, "Trip ID");
+
+  const tripRef = db.collection("trips").doc(tripId);
+
+  let completed = false;
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(tripRef);
+
+    if (!snapshot.exists) {
+      throw new HttpsError("not-found", "Trip not found.");
+    }
+
+    const trip = snapshot.data();
+
+    if (trip.status !== "assigned" && trip.status !== "in_progress") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Only assigned or in-progress trips can be confirmed."
+      );
+    }
+
+    const isPoster = trip.posterUid === auth.uid;
+    const isDriver = trip.assignedDriverUid === auth.uid;
+
+    if (!isPoster && !isDriver) {
+      throw new HttpsError(
+        "permission-denied",
+        "You are not a participant in this trip."
+      );
+    }
+
+    if (isPoster && trip.posterConfirmedCompletion === true) {
+      throw new HttpsError(
+        "already-exists",
+        "The trip poster has already confirmed completion."
+      );
+    }
+
+    if (isDriver && trip.driverConfirmedCompletion === true) {
+      throw new HttpsError(
+        "already-exists",
+        "The driver has already confirmed completion."
+      );
+    }
+
+    const updates = {
+      updatedAt: FieldValue.serverTimestamp()
+    };
+
+    if (isPoster) {
+      updates.posterConfirmedCompletion = true;
+      updates.posterCompletionConfirmedAt = FieldValue.serverTimestamp();
+    }
+
+    if (isDriver) {
+      updates.driverConfirmedCompletion = true;
+      updates.driverCompletionConfirmedAt = FieldValue.serverTimestamp();
+    }
+
+    const posterAlreadyConfirmed =
+      isPoster || trip.posterConfirmedCompletion === true;
+
+    const driverAlreadyConfirmed =
+      isDriver || trip.driverConfirmedCompletion === true;
+
+    if (posterAlreadyConfirmed && driverAlreadyConfirmed) {
+      updates.status = "completed";
+      updates.completedAt = FieldValue.serverTimestamp();
+      completed = true;
+    }
+
+    transaction.update(tripRef, updates);
+  });
+
+  await writeAuditLog(
+    {
+      uid: auth.uid,
+      token: {
+        email: auth.token.email || null
+      }
+    },
+    "confirmTripCompletion",
+    "trip",
+    tripId,
+    { completed }
+  );
+
+  return {
+    success: true,
+    completed,
+    message: completed
+      ? "Both parties have confirmed. The trip is completed."
+      : "Your confirmation has been recorded. Waiting for the other party."
   };
 });
 
@@ -629,20 +1007,14 @@ exports.reviewTrip = onCall(async (request) => {
 
 exports.archiveTrip = onCall(async (request) => {
   const actor = requireAdmin(request);
-
-  const tripId = requireString(
-    request.data.tripId,
-    "Trip ID"
-  );
+  const data = dataOf(request);
+  const tripId = requireString(data.tripId, "Trip ID");
 
   const ref = db.collection("trips").doc(tripId);
   const snapshot = await ref.get();
 
   if (!snapshot.exists) {
-    throw new HttpsError(
-      "not-found",
-      "Trip not found."
-    );
+    throw new HttpsError("not-found", "Trip not found.");
   }
 
   if (snapshot.data().status !== "completed") {
@@ -659,12 +1031,7 @@ exports.archiveTrip = onCall(async (request) => {
     updatedAt: FieldValue.serverTimestamp()
   });
 
-  await writeAuditLog(
-    actor,
-    "archiveTrip",
-    "trip",
-    tripId
-  );
+  await writeAuditLog(actor, "archiveTrip", "trip", tripId);
 
   return {
     success: true,
@@ -678,20 +1045,14 @@ exports.archiveTrip = onCall(async (request) => {
 
 exports.restoreTrip = onCall(async (request) => {
   const actor = requireAdmin(request);
-
-  const tripId = requireString(
-    request.data.tripId,
-    "Trip ID"
-  );
+  const data = dataOf(request);
+  const tripId = requireString(data.tripId, "Trip ID");
 
   const ref = db.collection("trips").doc(tripId);
   const snapshot = await ref.get();
 
   if (!snapshot.exists) {
-    throw new HttpsError(
-      "not-found",
-      "Trip not found."
-    );
+    throw new HttpsError("not-found", "Trip not found.");
   }
 
   if (snapshot.data().status !== "archived") {
@@ -708,12 +1069,7 @@ exports.restoreTrip = onCall(async (request) => {
     updatedAt: FieldValue.serverTimestamp()
   });
 
-  await writeAuditLog(
-    actor,
-    "restoreTrip",
-    "trip",
-    tripId
-  );
+  await writeAuditLog(actor, "restoreTrip", "trip", tripId);
 
   return {
     success: true,
@@ -722,93 +1078,136 @@ exports.restoreTrip = onCall(async (request) => {
 });
 
 // ======================================================
+// SUPER ADMIN PERMANENT DELETION
+// Only completed or archived trips.
+// Payment and audit records are retained.
+// ======================================================
+
+exports.permanentlyDeleteCompletedTrip = onCall(async (request) => {
+  const actor = requireSuperAdmin(request);
+  const data = dataOf(request);
+
+  const tripId = requireString(data.tripId, "Trip ID");
+
+  if (data.confirm !== true) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Explicit confirmation is required."
+    );
+  }
+
+  const tripRef = db.collection("trips").doc(tripId);
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(tripRef);
+
+    if (!snapshot.exists) {
+      throw new HttpsError("not-found", "Trip not found.");
+    }
+
+    const trip = snapshot.data();
+
+    if (!["completed", "archived"].includes(trip.status)) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Only completed or archived trips can be permanently deleted."
+      );
+    }
+
+    transaction.delete(tripRef);
+  });
+
+  await writeAuditLog(
+    actor,
+    "permanentlyDeleteCompletedTrip",
+    "trip",
+    tripId,
+    {
+      warning: "Trip document permanently deleted. Related payment and audit records retained."
+    }
+  );
+
+  return {
+    success: true,
+    message: "Completed trip permanently deleted. Payment and audit records were retained."
+  };
+});
+
+// ======================================================
 // UPDATE PAYMENT RECORD
 // ======================================================
 
-exports.updatePaymentRecord = onCall(
-  async (request) => {
-    const actor = requireAdmin(request);
+exports.updatePaymentRecord = onCall(async (request) => {
+  const actor = requireAdmin(request);
+  const data = dataOf(request);
 
-    const paymentId = requireString(
-      request.data.paymentId,
-      "Payment ID"
+  const paymentId = requireString(data.paymentId, "Payment ID");
+  const paymentStatus = requireString(data.paymentStatus, "Payment status");
+
+  const allowedStatuses = [
+    "unpaid",
+    "partially_paid",
+    "paid",
+    "disputed"
+  ];
+
+  if (!allowedStatuses.includes(paymentStatus)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Invalid payment status."
     );
+  }
 
-    const paymentStatus = requireString(
-      request.data.paymentStatus,
-      "Payment status"
-    );
+  const ref = db.collection("paymentRecords").doc(paymentId);
+  const snapshot = await ref.get();
 
-    const allowedStatuses = [
-      "unpaid",
-      "partially_paid",
-      "paid",
-      "disputed"
-    ];
+  if (!snapshot.exists) {
+    throw new HttpsError("not-found", "Payment record not found.");
+  }
 
-    if (!allowedStatuses.includes(paymentStatus)) {
+  const payment = snapshot.data();
+
+  const updates = {
+    paymentStatus,
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: actor.uid,
+    adminReason: getReason(data)
+  };
+
+  if (data.amountPaid !== undefined) {
+    const amountPaid = requireAmount(data.amountPaid, "Amount paid");
+
+    if (
+      payment.agreedFare !== undefined &&
+      amountPaid > Number(payment.agreedFare)
+    ) {
       throw new HttpsError(
         "invalid-argument",
-        "Invalid payment status."
+        "Amount paid cannot exceed the agreed fare."
       );
     }
 
-    const ref = db.collection("paymentRecords").doc(paymentId);
-    const snapshot = await ref.get();
-
-    if (!snapshot.exists) {
-      throw new HttpsError(
-        "not-found",
-        "Payment record not found."
-      );
-    }
-
-    const data = snapshot.data();
-
-    const updates = {
-      paymentStatus,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: actor.uid,
-      adminReason: getReason(request.data)
-    };
-
-    if (request.data.amountPaid !== undefined) {
-      const amountPaid = requireAmount(
-        request.data.amountPaid
-      );
-
-      if (
-        data.agreedFare !== undefined &&
-        amountPaid > Number(data.agreedFare)
-      ) {
-        throw new HttpsError(
-          "invalid-argument",
-          "Amount paid cannot exceed the agreed fare."
-        );
-      }
-
-      updates.amountPaid = amountPaid;
-    }
-
-    await ref.update(updates);
-
-    await writeAuditLog(
-      actor,
-      "updatePaymentRecord",
-      "payment",
-      paymentId,
-      {
-        paymentStatus,
-        amountPaid: updates.amountPaid ?? null
-      }
-    );
-
-    return {
-      success: true,
-      message: "Payment record updated."
-    };
+    updates.amountPaid = amountPaid;
   }
-);
+
+  await ref.update(updates);
+
+  await writeAuditLog(
+    actor,
+    "updatePaymentRecord",
+    "payment",
+    paymentId,
+    {
+      paymentStatus,
+      amountPaid: updates.amountPaid ?? null
+    }
+  );
+
+  return {
+    success: true,
+    message: "Payment record updated."
+  };
+});
 
 // ======================================================
 // REVIEW COMPLAINT
@@ -816,16 +1215,10 @@ exports.updatePaymentRecord = onCall(
 
 exports.reviewComplaint = onCall(async (request) => {
   const actor = requireAdmin(request);
+  const data = dataOf(request);
 
-  const complaintId = requireString(
-    request.data.complaintId,
-    "Complaint ID"
-  );
-
-  const status = requireString(
-    request.data.status,
-    "Complaint status"
-  );
+  const complaintId = requireString(data.complaintId, "Complaint ID");
+  const status = requireString(data.status, "Complaint status");
 
   const allowedStatuses = [
     "under_review",
@@ -844,27 +1237,20 @@ exports.reviewComplaint = onCall(async (request) => {
   const snapshot = await ref.get();
 
   if (!snapshot.exists) {
-    throw new HttpsError(
-      "not-found",
-      "Complaint not found."
-    );
+    throw new HttpsError("not-found", "Complaint not found.");
   }
 
   await ref.update({
     status,
-    adminNotes: getReason(request.data),
+    adminNotes: getReason(data),
     reviewedBy: actor.uid,
     reviewedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   });
 
-  await writeAuditLog(
-    actor,
-    "reviewComplaint",
-    "complaint",
-    complaintId,
-    { status }
-  );
+  await writeAuditLog(actor, "reviewComplaint", "complaint", complaintId, {
+    status
+  });
 
   return {
     success: true,
@@ -876,137 +1262,147 @@ exports.reviewComplaint = onCall(async (request) => {
 // PUBLISH ANNOUNCEMENT
 // ======================================================
 
-exports.publishAnnouncement = onCall(
-  async (request) => {
-    const actor = requireAdmin(request);
+exports.publishAnnouncement = onCall(async (request) => {
+  const actor = requireAdmin(request);
+  const data = dataOf(request);
 
-    const announcement = requireString(
-      request.data.announcement,
-      "Announcement"
-    );
+  const announcement = requireString(
+    data.announcement,
+    "Announcement",
+    2000
+  );
 
-    if (announcement.length > 2000) {
-      throw new HttpsError(
-        "invalid-argument",
-        "Announcement must not exceed 2000 characters."
-      );
-    }
+  const ref = await db.collection("announcements").add({
+    message: announcement,
+    publishedBy: actor.uid,
+    publishedAt: FieldValue.serverTimestamp(),
+    active: true
+  });
 
-    const ref = await db.collection("announcements").add({
-      message: announcement,
-      publishedBy: actor.uid,
-      publishedAt: FieldValue.serverTimestamp(),
-      active: true
-    });
+  await writeAuditLog(
+    actor,
+    "publishAnnouncement",
+    "announcement",
+    ref.id
+  );
 
-    await writeAuditLog(
-      actor,
-      "publishAnnouncement",
-      "announcement",
-      ref.id
-    );
-
-    return {
-      success: true,
-      message: "Announcement published.",
-      announcementId: ref.id
-    };
-  }
-);
+  return {
+    success: true,
+    message: "Announcement published.",
+    announcementId: ref.id
+  };
+});
 
 // ======================================================
 // GRANT OR REVOKE ADMIN ACCESS
 // SUPER ADMIN ONLY
 // ======================================================
 
-exports.manageAdminAccess = onCall(
-  async (request) => {
-    const actor = requireSuperAdmin(request);
+exports.manageAdminAccess = onCall(async (request) => {
+  const actor = requireSuperAdmin(request);
+  const data = dataOf(request);
 
-    const targetUid = requireString(
-      request.data.targetUid,
-      "Target user ID"
+  const targetUid = requireString(data.targetUid, "Target user ID");
+  const action = requireString(data.action, "Action");
+
+  if (!["grant", "revoke"].includes(action)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Action must be grant or revoke."
     );
+  }
 
-    const action = requireString(
-      request.data.action,
-      "Action"
+  if (targetUid === actor.uid) {
+    throw new HttpsError(
+      "failed-precondition",
+      "You cannot change your own Super Admin access."
     );
+  }
 
-    if (!["grant", "revoke"].includes(action)) {
-      throw new HttpsError(
-        "invalid-argument",
-        "Action must be grant or revoke."
-      );
-    }
+  const targetUser = await getUserRecord(targetUid);
+  const { ref, data: profile } = await requireUserProfile(targetUid);
 
-    if (targetUid === actor.uid) {
+  if (
+    profile.role === "superadmin" ||
+    targetUser.customClaims?.superadmin === true
+  ) {
+    throw new HttpsError(
+      "permission-denied",
+      "This operation cannot change another Super Admin."
+    );
+  }
+
+  if (action === "grant") {
+    if (!targetUser.emailVerified || profile.status !== "active") {
       throw new HttpsError(
         "failed-precondition",
-        "You cannot change your own Super Admin access."
+        "Only verified, active accounts can receive Admin access."
       );
     }
 
-    const targetUser = await getUserRecord(targetUid);
-    const { ref, data } = await requireUserProfile(targetUid);
-
-    if (data.role === "superadmin") {
+    if (!["driver", "broker"].includes(profile.role)) {
       throw new HttpsError(
-        "permission-denied",
-        "This operation cannot change another Super Admin."
+        "failed-precondition",
+        "This account cannot be granted Admin access."
       );
     }
 
-    if (action === "grant") {
-      if (data.status !== "active") {
-        throw new HttpsError(
-          "failed-precondition",
-          "Only active accounts can receive Admin access."
-        );
-      }
+    const existingClaims = targetUser.customClaims || {};
 
-      const existingClaims = targetUser.customClaims || {};
+    await adminAuth.setCustomUserClaims(targetUid, {
+      ...existingClaims,
+      admin: true
+    });
 
-      await adminAuth.setCustomUserClaims(targetUid, {
-        ...existingClaims,
-        admin: true
-      });
+    await ref.update({
+      adminAccessOriginalRole: profile.role,
+      role: "admin",
+      updatedAt: FieldValue.serverTimestamp()
+    });
 
-      await ref.update({
-        role: "admin",
-        updatedAt: FieldValue.serverTimestamp()
-      });
-
-    } else {
-      const existingClaims = targetUser.customClaims || {};
-      const updatedClaims = { ...existingClaims };
-
-      delete updatedClaims.admin;
-
-      await adminAuth.setCustomUserClaims(
-        targetUid,
-        updatedClaims
+  } else {
+    if (targetUser.customClaims?.admin !== true) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This account does not currently have Admin access."
       );
-
-      await ref.update({
-        role: data.role === "admin" ? "driver" : data.role,
-        updatedAt: FieldValue.serverTimestamp()
-      });
     }
 
-    await writeAuditLog(
-      actor,
-      "manageAdminAccess",
-      "user",
-      targetUid,
-      { action }
-    );
+    const existingClaims = targetUser.customClaims || {};
+    const updatedClaims = { ...existingClaims };
 
-    return {
-      success: true,
-      message: action === "grant"
-        ? "Administrator access granted."
-        : "Administrator access revoked."
-    };
+    delete updatedClaims.admin;
+
+    await adminAuth.setCustomUserClaims(targetUid, updatedClaims);
+
+    const originalRole = profile.adminAccessOriginalRole;
+
+    if (!["driver", "broker"].includes(originalRole)) {
+      throw new HttpsError(
+        "failed-precondition",
+        "The original account role is missing. Manual review is required."
+      );
+    }
+
+    await ref.update({
+      role: originalRole,
+      adminAccessOriginalRole: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
   }
-);
+
+  await writeAuditLog(
+    actor,
+    "manageAdminAccess",
+    "user",
+    targetUid,
+    { action }
+  );
+
+  return {
+    success: true,
+    message: action === "grant"
+      ? "Administrator access granted."
+      : "Administrator access revoked."
+  };
+});
