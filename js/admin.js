@@ -37,15 +37,23 @@ const ADMIN_FUNCTIONS = {
   reviewTrip: "reviewTrip",
   archiveTrip: "archiveTrip",
   restoreTrip: "restoreTrip",
+  assignDriver: "assignDriver",
   updatePaymentRecord: "updatePaymentRecord",
   reviewComplaint: "reviewComplaint",
   publishAnnouncement: "publishAnnouncement",
-  manageAdminAccess: "manageAdminAccess"
+  manageAdminAccess: "manageAdminAccess",
+  permanentlyDeleteCompletedTrip: "permanentlyDeleteCompletedTrip"
 };
+
+const SUPER_ADMIN_ONLY = new Set([
+  "manageAdminAccess",
+  "permanentlyDeleteCompletedTrip"
+]);
 
 let currentUser = null;
 let currentRole = null;
 let dashboardReady = false;
+let authObserverReady = false;
 
 // =====================================
 // DOM HELPERS
@@ -77,12 +85,7 @@ function showMessage(message, type = "info") {
   element.style.display = "block";
   element.dataset.type = type;
 
-  element.classList.remove(
-    "success",
-    "error",
-    "info"
-  );
-
+  element.classList.remove("success", "error", "info");
   element.classList.add(type);
 }
 
@@ -100,9 +103,7 @@ function setLoading(element, loading, originalText = "") {
   element.disabled = loading;
 
   if (loading) {
-    element.dataset.originalText =
-      element.textContent.trim();
-
+    element.dataset.originalText = element.textContent.trim();
     element.textContent = "Please wait...";
   } else {
     element.textContent =
@@ -119,7 +120,11 @@ function setLoading(element, loading, originalText = "") {
 async function denyAccess(message = "Access denied.") {
   showMessage(message, "error");
 
-  await signOut(auth);
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("Sign-out error:", error);
+  }
 
   window.location.replace("login.html");
 }
@@ -131,32 +136,21 @@ async function checkAdminAccess(user) {
   }
 
   try {
-    const tokenResult = await getIdTokenResult(
-      user,
-      true
-    );
-
+    const tokenResult = await getIdTokenResult(user, true);
     const claims = tokenResult.claims || {};
 
-    const isSuperAdmin =
-      claims.superadmin === true;
-
-    const isAdmin =
-      claims.admin === true || isSuperAdmin;
+    const isSuperAdmin = claims.superadmin === true;
+    const isAdmin = claims.admin === true || isSuperAdmin;
 
     if (!isAdmin) {
       await denyAccess(
         "You do not have permission to access this dashboard."
       );
-
       return false;
     }
 
     currentUser = user;
-
-    currentRole = isSuperAdmin
-      ? "superadmin"
-      : "admin";
+    currentRole = isSuperAdmin ? "superadmin" : "admin";
 
     document.body.dataset.adminRole = currentRole;
 
@@ -169,6 +163,12 @@ async function checkAdminAccess(user) {
       ["#adminRole", "[data-admin-role]"],
       currentRole.toUpperCase()
     );
+
+    // Hide Super Admin-only controls from ordinary Admins.
+    document.querySelectorAll("[data-superadmin-only]")
+      .forEach((element) => {
+        element.hidden = !isSuperAdmin;
+      });
 
     return true;
 
@@ -196,11 +196,7 @@ async function getCollectionCount(name) {
     return snapshot.data().count || 0;
 
   } catch (error) {
-    console.error(
-      `Unable to count ${name}:`,
-      error
-    );
-
+    console.error(`Unable to count ${name}:`, error);
     return "—";
   }
 }
@@ -243,23 +239,164 @@ async function loadDashboardStatistics() {
 
   await Promise.all(
     statistics.map(async (item) => {
-      const count = await getCollectionCount(
-        item.collection
-      );
-
+      const count = await getCollectionCount(item.collection);
       setText(item.selectors, count);
     })
   );
 }
 
 // =====================================
+// PAYLOAD NORMALISATION
+// =====================================
+
+function collectActionPayload(button) {
+  const payload = {};
+
+  const allowedFields = [
+    "userId",
+    "tripId",
+    "requestId",
+    "complaintId",
+    "driverId",
+    "targetUid",
+    "announcement",
+    "status",
+    "reason",
+    "decision",
+    "paymentId",
+    "paymentStatus",
+    "amountPaid",
+    "action",
+    "confirm"
+  ];
+
+  // Collect explicitly supplied data attributes.
+  for (const key of allowedFields) {
+    if (button.dataset[key] !== undefined) {
+      payload[key] = button.dataset[key];
+    }
+  }
+
+  // Collect values from an associated form.
+  const form = button.closest("form");
+
+  if (form) {
+    const formData = new FormData(form);
+
+    for (const [key, value] of formData.entries()) {
+      if (allowedFields.includes(key)) {
+        payload[key] = value;
+      }
+    }
+  }
+
+  // Convert numerical values.
+  if (payload.amountPaid !== undefined) {
+    payload.amountPaid = Number(payload.amountPaid);
+  }
+
+  // HTML checkbox confirmation.
+  if (payload.confirm !== undefined) {
+    payload.confirm =
+      payload.confirm === true ||
+      payload.confirm === "true" ||
+      payload.confirm === "on";
+  }
+
+  // Ensure action is present for Admin access management.
+  if (
+    button.dataset.action !== undefined &&
+    payload.action === undefined
+  ) {
+    payload.action = button.dataset.action;
+  }
+
+  return payload;
+}
+
+// =====================================
+// PAYLOAD VALIDATION
+// =====================================
+
+function validateActionPayload(action, payload) {
+  const requiredFields = {
+    approveUser: ["userId"],
+    rejectUser: ["userId"],
+    suspendUser: ["userId"],
+    restoreUser: ["userId"],
+    verifyDriver: ["driverId"],
+    rejectDriverVerification: ["driverId"],
+    reviewTrip: ["tripId", "decision"],
+    archiveTrip: ["tripId"],
+    restoreTrip: ["tripId"],
+    assignDriver: ["tripId", "requestId"],
+    updatePaymentRecord: ["paymentId", "paymentStatus"],
+    reviewComplaint: ["complaintId", "status"],
+    publishAnnouncement: ["announcement"],
+    manageAdminAccess: ["targetUid", "action"],
+    permanentlyDeleteCompletedTrip: ["tripId", "confirm"]
+  };
+
+  const fields = requiredFields[action] || [];
+
+  for (const field of fields) {
+    if (
+      payload[field] === undefined ||
+      payload[field] === null ||
+      payload[field] === ""
+    ) {
+      throw new Error(`Missing required field: ${field}`);
+    }
+  }
+
+  if (
+    action === "manageAdminAccess" &&
+    !["grant", "revoke"].includes(payload.action)
+  ) {
+    throw new Error("Select grant or revoke.");
+  }
+
+  if (
+    action === "reviewTrip" &&
+    !["approved", "rejected"].includes(payload.decision)
+  ) {
+    throw new Error("Invalid trip moderation decision.");
+  }
+
+  if (
+    action === "updatePaymentRecord" &&
+    !["unpaid", "partially_paid", "paid", "disputed"]
+      .includes(payload.paymentStatus)
+  ) {
+    throw new Error("Invalid payment status.");
+  }
+
+  if (
+    action === "permanentlyDeleteCompletedTrip" &&
+    payload.confirm !== true
+  ) {
+    throw new Error(
+      "You must confirm permanent deletion."
+    );
+  }
+
+  if (
+    action === "updatePaymentRecord" &&
+    payload.amountPaid !== undefined &&
+    (
+      !Number.isFinite(payload.amountPaid) ||
+      payload.amountPaid < 0
+    )
+  ) {
+    throw new Error("Enter a valid payment amount.");
+  }
+}
+
+// =====================================
 // CLOUD FUNCTION CALLS
 // =====================================
 
-async function callAdminFunction(
-  functionName,
-  payload = {}
-) {
+async function callAdminFunction(functionName, payload = {}) {
   if (!currentUser || !currentRole) {
     throw new Error(
       "Administrator authentication is required."
@@ -269,6 +406,15 @@ async function callAdminFunction(
   if (!ADMIN_FUNCTIONS[functionName]) {
     throw new Error(
       "This administrative operation is not recognised."
+    );
+  }
+
+  if (
+    SUPER_ADMIN_ONLY.has(functionName) &&
+    currentRole !== "superadmin"
+  ) {
+    throw new Error(
+      "Only the Super Admin can perform this operation."
     );
   }
 
@@ -290,71 +436,40 @@ async function handleAdminAction(button) {
   const action = button.dataset.adminAction;
 
   if (!action || !ADMIN_FUNCTIONS[action]) {
-    showMessage(
-      "Invalid administrative action.",
-      "error"
-    );
-
+    showMessage("Invalid administrative action.", "error");
     return;
   }
 
-  // Only Super Admin can manage administrator access.
   if (
-    action === "manageAdminAccess" &&
+    SUPER_ADMIN_ONLY.has(action) &&
     currentRole !== "superadmin"
   ) {
     showMessage(
-      "Only the Super Admin can manage administrator access.",
+      "Only the Super Admin can perform this operation.",
       "error"
     );
-
-    return;
-  }
-
-  const payload = {};
-
-  // Read explicitly supplied data attributes.
-  [
-    "userId",
-    "tripId",
-    "requestId",
-    "complaintId",
-    "driverId",
-    "targetUid",
-    "announcement",
-    "status",
-    "reason",
-    "amount",
-    "paymentStatus",
-    "decision",
-    "role"
-  ].forEach((key) => {
-    if (button.dataset[key] !== undefined) {
-      payload[key] = button.dataset[key];
-    }
-  });
-
-  // Include form fields from an associated form, if present.
-  const form = button.closest("form");
-
-  if (form) {
-    const formData = new FormData(form);
-
-    for (const [key, value] of formData.entries()) {
-      payload[key] = value;
-    }
-  }
-
-  const confirmation = button.dataset.confirm ||
-    `Are you sure you want to perform: ${action}?`;
-
-  if (!window.confirm(confirmation)) {
     return;
   }
 
   const originalText = button.textContent.trim();
 
   try {
+    const payload = collectActionPayload(button);
+
+    validateActionPayload(action, payload);
+
+    let confirmation = button.dataset.confirmMessage ||
+      `Are you sure you want to perform: ${action}?`;
+
+    if (action === "permanentlyDeleteCompletedTrip") {
+      confirmation =
+        "WARNING: This permanently deletes the completed trip record. Payment and audit records will be retained. Continue?";
+    }
+
+    if (!window.confirm(confirmation)) {
+      return;
+    }
+
     setLoading(button, true);
 
     showMessage(
@@ -367,14 +482,10 @@ async function handleAdminAction(button) {
       payload
     );
 
-    console.log(
-      `Admin operation ${action} completed:`,
-      result
-    );
+    console.log(`Admin operation ${action}:`, result);
 
     showMessage(
-      result?.message ||
-      "The request was processed successfully.",
+      result?.message || "Operation completed successfully.",
       "success"
     );
 
@@ -391,14 +502,10 @@ async function handleAdminAction(button) {
     );
 
   } catch (error) {
-    console.error(
-      `Admin action ${action} failed:`,
-      error
-    );
+    console.error(`Admin action ${action} failed:`, error);
 
     showMessage(
-      error.message ||
-      "The operation could not be completed.",
+      error.message || "The operation could not be completed.",
       "error"
     );
 
@@ -413,9 +520,7 @@ async function handleAdminAction(button) {
 
 function setupAdminActions() {
   document.addEventListener("click", async (event) => {
-    const button = event.target.closest(
-      "[data-admin-action]"
-    );
+    const button = event.target.closest("[data-admin-action]");
 
     if (!button) return;
 
@@ -434,7 +539,6 @@ function setupAdminActions() {
 async function logoutAdmin() {
   try {
     await signOut(auth);
-
     window.location.replace("login.html");
 
   } catch (error) {
@@ -478,9 +582,7 @@ async function initialiseAdminDashboard(user) {
 
   await loadDashboardStatistics();
 
-  document.body.classList.add(
-    "admin-dashboard-ready"
-  );
+  document.body.classList.add("admin-dashboard-ready");
 
   document.dispatchEvent(
     new CustomEvent("darjeelinghost:admin-ready", {
@@ -498,12 +600,18 @@ async function initialiseAdminDashboard(user) {
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
+    if (!authObserverReady) {
+      authObserverReady = true;
+    }
+
     await denyAccess(
       "Please log in with an administrator account."
     );
 
     return;
   }
+
+  authObserverReady = true;
 
   await initialiseAdminDashboard(user);
 });
