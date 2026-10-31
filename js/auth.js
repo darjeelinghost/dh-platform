@@ -8,135 +8,120 @@ import {
 } from "./firebase.js";
 
 
-/* =========================================
-   1. COMMON HELPERS
-========================================= */
-
-function getField(...selectors) {
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-
-    if (element) return element;
-  }
-
-  return null;
-}
-
-function getValue(...selectors) {
-  return getField(...selectors)?.value?.trim() || "";
-}
+/* =====================================
+   1. MESSAGE HANDLING
+===================================== */
 
 function showMessage(message, type = "error") {
-  let messageBox = document.getElementById("authMessage");
+  let box = document.getElementById("authMessage");
 
-  if (!messageBox) {
-    messageBox = document.createElement("div");
-    messageBox.id = "authMessage";
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "authMessage";
+    box.setAttribute("role", "status");
+    box.setAttribute("aria-live", "polite");
 
     const form = document.querySelector("form");
 
     if (form) {
-      form.prepend(messageBox);
+      form.before(box);
     } else {
-      document.body.prepend(messageBox);
+      document.body.prepend(box);
     }
   }
 
-  messageBox.textContent = message;
-  messageBox.style.padding = "12px";
-  messageBox.style.marginBottom = "15px";
-  messageBox.style.borderRadius = "7px";
-  messageBox.style.fontSize = "14px";
+  box.hidden = false;
+  box.textContent = message;
+  box.style.display = "block";
+  box.style.padding = "12px";
+  box.style.marginBottom = "15px";
+  box.style.borderRadius = "7px";
+  box.style.fontSize = "14px";
 
   if (type === "success") {
-    messageBox.style.background = "#e1f5e8";
-    messageBox.style.color = "#176b37";
+    box.style.background = "#e1f5e8";
+    box.style.color = "#176b37";
   } else {
-    messageBox.style.background = "#fde7e7";
-    messageBox.style.color = "#a52b2b";
+    box.style.background = "#fde7e7";
+    box.style.color = "#a52b2b";
   }
+}
+
+
+/* =====================================
+   2. FORM HELPERS
+===================================== */
+
+function getValue(...selectors) {
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+
+    if (element) {
+      return element.value.trim();
+    }
+  }
+
+  return "";
+}
+
+function getPassword(...selectors) {
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+
+    if (element) {
+      return element.value;
+    }
+  }
+
+  return "";
 }
 
 function setLoading(button, loading, originalText) {
   if (!button) return;
 
   button.disabled = loading;
-  button.textContent = loading ? "Please wait..." : originalText;
+  button.textContent = loading
+    ? "Please wait..."
+    : originalText;
 }
 
 
-/* =========================================
-   2. REGISTRATION
-========================================= */
+/* =====================================
+   3. REGISTRATION
+===================================== */
 
 const registerForm =
-  document.getElementById("registerForm") ||
-  document.querySelector('form[data-auth="register"]');
+  document.getElementById("registerForm");
 
 if (registerForm) {
-  registerForm.addEventListener("submit", async function(event) {
+  registerForm.addEventListener("submit", async event => {
     event.preventDefault();
 
-    const submitButton =
-      registerForm.querySelector('[type="submit"]');
+    const button = registerForm.querySelector(
+      '[type="submit"]'
+    );
 
     const originalText =
-      submitButton?.textContent || "Create Account";
-
-    const displayName = getValue(
-      "#fullName",
-      "#displayName",
-      '[name="fullName"]',
-      '[name="displayName"]'
-    );
-
-    const email = getValue(
-      "#registerEmail",
-      "#email",
-      '[name="email"]'
-    ).toLowerCase();
-
-    const phone = getValue(
-      "#phone",
-      '[name="phone"]'
-    );
-
-    const whatsapp = getValue(
-      "#whatsapp",
-      '[name="whatsapp"]'
-    );
-
-    const role = getValue(
-      "#accountType",
-      "#role",
-      '[name="accountType"]',
-      '[name="role"]'
-    ).toLowerCase();
-
-    const password =
-      getField("#registerPassword", "#password", '[name="password"]')
-        ?.value || "";
-
-    const confirmPassword =
-      getField(
-        "#confirmPassword",
-        "#confirm-password",
-        '[name="confirmPassword"]'
-      )?.value || "";
-
-    const terms = getField(
-      "#terms",
-      "#agreeTerms",
-      '[name="terms"]'
-    );
+      button?.textContent || "Create Account";
 
     try {
-      if (!displayName || !email || !phone || !role || !password) {
+      const displayName = getValue("#fullName");
+      const email = getValue("#registerEmail").toLowerCase();
+      const phone = getValue("#phone");
+      const whatsapp = getValue("#whatsapp");
+      const role = getValue("#accountType").toLowerCase();
+
+      const password = getPassword("#registerPassword");
+      const confirmPassword = getPassword("#confirmPassword");
+
+      const terms = document.getElementById("terms");
+
+      if (!displayName || !email || !phone || !role) {
         throw new Error("Please complete all required fields.");
       }
 
       if (!["driver", "broker"].includes(role)) {
-        throw new Error("Please select Driver or Travel Agent / Broker.");
+        throw new Error("Select Driver or Travel Agent / Broker.");
       }
 
       if (password.length < 6) {
@@ -147,11 +132,11 @@ if (registerForm) {
         throw new Error("Your passwords do not match.");
       }
 
-      if (terms && !terms.checked) {
+      if (!terms?.checked) {
         throw new Error("Please accept the terms and conditions.");
       }
 
-      setLoading(submitButton, true, originalText);
+      setLoading(button, true, originalText);
 
       await registerUser({
         displayName,
@@ -163,7 +148,7 @@ if (registerForm) {
       });
 
       showMessage(
-        "Registration successful. Your account is pending administrator approval.",
+        "Registration successful. Your account is awaiting administrator approval.",
         "success"
       );
 
@@ -171,7 +156,7 @@ if (registerForm) {
 
       setTimeout(() => {
         window.location.href = "login.html";
-      }, 2000);
+      }, 2500);
 
     } catch (error) {
       console.error("Registration error:", error);
@@ -181,46 +166,38 @@ if (registerForm) {
       );
 
     } finally {
-      setLoading(submitButton, false, originalText);
+      setLoading(button, false, originalText);
     }
   });
 }
 
 
-/* =========================================
-   3. LOGIN
-========================================= */
+/* =====================================
+   4. LOGIN
+===================================== */
 
 const loginForm =
-  document.getElementById("loginForm") ||
-  document.querySelector('form[data-auth="login"]');
+  document.getElementById("loginForm");
 
 if (loginForm) {
-  loginForm.addEventListener("submit", async function(event) {
+  loginForm.addEventListener("submit", async event => {
     event.preventDefault();
 
-    const submitButton =
-      loginForm.querySelector('[type="submit"]');
+    const button = loginForm.querySelector(
+      '[type="submit"]'
+    );
 
-    const originalText =
-      submitButton?.textContent || "Login";
-
-    const email = getValue(
-      "#loginEmail",
-      "#email",
-      '[name="email"]'
-    ).toLowerCase();
-
-    const password =
-      getField("#loginPassword", "#password", '[name="password"]')
-        ?.value || "";
+    const originalText = button?.textContent || "Login";
 
     try {
+      const email = getValue("#loginEmail").toLowerCase();
+      const password = getPassword("#loginPassword");
+
       if (!email || !password) {
-        throw new Error("Please enter your email and password.");
+        throw new Error("Enter your email and password.");
       }
 
-      setLoading(submitButton, true, originalText);
+      setLoading(button, true, originalText);
 
       const user = await loginUser(email, password);
 
@@ -230,7 +207,7 @@ if (loginForm) {
         await logoutUser();
 
         throw new Error(
-          "Your user profile could not be found. Please contact the administrator."
+          "Your account profile was not found. Contact the administrator."
         );
       }
 
@@ -238,27 +215,29 @@ if (loginForm) {
         await logoutUser();
 
         throw new Error(
-          "Your account has been suspended. Please contact the administrator."
+          "Your account is suspended. Contact the administrator."
         );
       }
 
       if (profile.status !== "active") {
         await logoutUser();
 
-        showMessage(
-          "Your account is awaiting administrator approval. Please try again after verification."
+        throw new Error(
+          "Your account is awaiting administrator approval."
         );
-
-        return;
       }
 
-      if (
-        !["driver", "broker", "admin", "superadmin"]
-          .includes(profile.role)
-      ) {
+      const validRoles = [
+        "driver",
+        "broker",
+        "admin",
+        "superadmin"
+      ];
+
+      if (!validRoles.includes(profile.role)) {
         await logoutUser();
 
-        throw new Error("Your account has an invalid role.");
+        throw new Error("Invalid account permissions.");
       }
 
       showMessage("Login successful. Redirecting...", "success");
@@ -276,19 +255,19 @@ if (loginForm) {
       console.error("Login error:", error);
 
       showMessage(
-        error.message || "Login failed. Please check your credentials."
+        error.message || "Login failed. Please try again."
       );
 
     } finally {
-      setLoading(submitButton, false, originalText);
+      setLoading(button, false, originalText);
     }
   });
 }
 
 
-/* =========================================
-   4. LOGOUT BUTTONS
-========================================= */
+/* =====================================
+   5. LOGOUT BUTTONS
+===================================== */
 
 document.querySelectorAll("[data-logout]").forEach(button => {
   button.addEventListener("click", async () => {
@@ -303,11 +282,11 @@ document.querySelectorAll("[data-logout]").forEach(button => {
 });
 
 
-/* =========================================
-   5. AUTHENTICATION CHECK
-========================================= */
+/* =====================================
+   6. PROTECTED PAGE CHECK
+===================================== */
 
-async function checkCurrentUser() {
+async function checkCurrentPage(user) {
   const protectedPages = [
     "dashboard.html",
     "driver-profile.html",
@@ -324,8 +303,6 @@ async function checkCurrentUser() {
     return;
   }
 
-  const user = auth.currentUser;
-
   if (!user) {
     window.location.replace("login.html");
     return;
@@ -340,48 +317,43 @@ async function checkCurrentUser() {
       return;
     }
 
-    const isAdmin =
-      profile.role === "admin" ||
-      profile.role === "superadmin";
+    const isAdmin = [
+      "admin",
+      "superadmin"
+    ].includes(profile.role);
 
     if (currentPage === "admin.html" && !isAdmin) {
       window.location.replace("dashboard.html");
-      return;
-    }
-
-    if (
-      currentPage !== "admin.html" &&
-      isAdmin
-    ) {
-      // Admin users may access ordinary pages too.
-      // No redirect is required.
     }
 
   } catch (error) {
-    console.error("Authentication check failed:", error);
+    console.error("Page access check failed:", error);
+
     await logoutUser();
     window.location.replace("login.html");
   }
 }
 
 
-/* =========================================
-   6. INITIALISE AUTHENTICATION CHECK
-========================================= */
+/* =====================================
+   7. AUTHENTICATION INITIALISATION
+===================================== */
 
 auth.authStateReady()
-  .then(checkCurrentUser)
+  .then(() => {
+    return checkCurrentPage(auth.currentUser);
+  })
   .catch(error => {
     console.error("Authentication initialisation failed:", error);
   });
 
 
-/* =========================================
-   7. GLOBAL LOGOUT FUNCTION
-========================================= */
+/* =====================================
+   8. GLOBAL AUTH ACCESS
+===================================== */
 
 window.DarjAuth = {
-  logout: async function() {
+  logout: async () => {
     await logoutUser();
     window.location.href = "login.html";
   }
