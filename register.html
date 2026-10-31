@@ -4,39 +4,218 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#102b46">
-  <meta name="description" content="Register for DarjeelingHost.">
-  <title>Register | DarjeelingHost</title>
+
+  <title>Create Account | DarjeelingHost</title>
+
+  <meta name="description"
+    content="Register as a driver or travel agent with DarjeelingHost.">
+
   <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .register-wrapper {
+      max-width: 520px;
+      margin: 40px auto;
+      padding: 0 18px;
+    }
+
+    .register-card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 14px;
+      border: 1px solid #e0e6eb;
+      box-shadow: 0 8px 30px rgba(0,0,0,.06);
+    }
+
+    .register-heading {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .register-heading h1 {
+      color: #173f5f;
+      margin-bottom: 8px;
+    }
+
+    .register-heading p {
+      color: #657585;
+      font-size: 14px;
+    }
+
+    .register-form {
+      display: grid;
+      gap: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 7px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d7dee5;
+      border-radius: 7px;
+      font-size: 15px;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: 2px solid #b6d4e8;
+      border-color: #173f5f;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper input {
+      padding-right: 75px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      color: #173f5f;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .terms-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #526575;
+    }
+
+    .terms-row input {
+      margin-top: 3px;
+    }
+
+    .terms-row a {
+      color: #173f5f;
+    }
+
+    .register-submit {
+      width: 100%;
+      padding: 14px;
+      background: #173f5f;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .register-submit:hover {
+      background: #24577d;
+    }
+
+    .register-submit:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .register-footer {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 14px;
+      color: #657585;
+    }
+
+    .register-footer a {
+      color: #173f5f;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .register-footer a:hover {
+      text-decoration: underline;
+    }
+
+    .approval-note {
+      background: #f4f7f9;
+      border-radius: 8px;
+      padding: 13px;
+      margin-top: 18px;
+      font-size: 13px;
+      color: #526575;
+      line-height: 1.5;
+    }
+
+    .password-hint {
+      color: #657585;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    @media(max-width:480px) {
+      .register-wrapper {
+        margin: 25px auto;
+      }
+
+      .register-card {
+        padding: 22px;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<header>
-  <div class="container navbar">
-    <a href="index.html" class="brand">
-      Darjeeling<span>Host</span>
+<header class="site-header">
+  <div class="container">
+
+    <a href="index.html" class="logo">
+      DarjeelingHost
     </a>
-    <a href="index.html" class="btn btn-outline">Back to Home</a>
+
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="index.html#about">About</a>
+      <a href="index.html#how-it-works">How It Works</a>
+      <a href="login.html">Login</a>
+    </nav>
+
   </div>
 </header>
 
-<main class="container">
 
-  <div class="form-container">
+<main class="register-wrapper">
 
-    <h2 style="color:var(--primary);text-align:center;">
-      Create Your Account
-    </h2>
+  <div class="register-card">
 
-    <p style="color:var(--muted);text-align:center;">
-      Join the DarjeelingHost network.
-    </p>
+    <div class="register-heading">
+      <h1>Create Your Account</h1>
+      <p>Join the DarjeelingHost trip outsourcing network.</p>
+    </div>
 
-    <form id="registerForm">
+    <div
+      id="authMessage"
+      role="status"
+      aria-live="polite"
+      hidden>
+    </div>
+
+    <form id="registerForm" class="register-form">
 
       <div class="form-group">
         <label for="fullName">Full Name *</label>
+
         <input
           type="text"
           id="fullName"
@@ -44,147 +223,211 @@
           placeholder="Enter your full name"
           autocomplete="name"
           maxlength="100"
-          required
-        >
+          required>
       </div>
 
+
       <div class="form-group">
-        <label for="email">Email Address *</label>
+        <label for="registerEmail">Email Address *</label>
+
         <input
           type="email"
-          id="email"
+          id="registerEmail"
           name="email"
-          placeholder="Enter your email"
+          placeholder="Enter your email address"
           autocomplete="email"
-          required
-        >
+          maxlength="254"
+          required>
       </div>
+
 
       <div class="form-group">
         <label for="phone">Phone Number *</label>
+
         <input
           type="tel"
           id="phone"
           name="phone"
           placeholder="Enter your phone number"
           autocomplete="tel"
-          required
-        >
+          maxlength="25"
+          required>
       </div>
+
 
       <div class="form-group">
         <label for="whatsapp">WhatsApp Number</label>
+
         <input
           type="tel"
           id="whatsapp"
           name="whatsapp"
-          placeholder="Enter your WhatsApp number"
-        >
+          placeholder="Enter WhatsApp number"
+          maxlength="25">
       </div>
 
+
       <div class="form-group">
-        <label for="role">Account Type *</label>
-        <select id="role" name="role" required>
-          <option value="">Select account type</option>
-          <option value="driver">Driver</option>
-          <option value="broker">Travel Agent / Broker</option>
+        <label for="accountType">Account Type *</label>
+
+        <select
+          id="accountType"
+          name="accountType"
+          required>
+
+          <option value="">Select Account Type</option>
+
+          <option value="driver">
+            Driver
+          </option>
+
+          <option value="broker">
+            Travel Agent / Broker
+          </option>
+
         </select>
       </div>
 
+
       <div class="form-group">
-        <label for="password">Create Password *</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          placeholder="Minimum 8 characters"
-          autocomplete="new-password"
-          minlength="8"
-          required
-        >
+        <label for="registerPassword">Password *</label>
+
+        <div class="password-wrapper">
+
+          <input
+            type="password"
+            id="registerPassword"
+            name="password"
+            placeholder="Create a password"
+            autocomplete="new-password"
+            minlength="6"
+            required>
+
+          <button
+            type="button"
+            class="toggle-password"
+            data-password-target="registerPassword">
+            SHOW
+          </button>
+
+        </div>
+
+        <p class="password-hint">
+          Minimum 6 characters.
+        </p>
       </div>
+
 
       <div class="form-group">
         <label for="confirmPassword">Confirm Password *</label>
-        <input
-          type="password"
-          id="confirmPassword"
-          name="confirmPassword"
-          placeholder="Enter password again"
-          autocomplete="new-password"
-          minlength="8"
-          required
-        >
-      </div>
 
-      <div class="form-group">
-        <label style="display:flex;align-items:flex-start;gap:10px;font-weight:400;">
+        <div class="password-wrapper">
+
           <input
-            type="checkbox"
-            id="terms"
-            required
-            style="width:auto;margin-top:4px;"
-          >
-          <span>
-            I agree to the platform's terms and conditions.
-          </span>
-        </label>
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            placeholder="Enter password again"
+            autocomplete="new-password"
+            minlength="6"
+            required>
+
+          <button
+            type="button"
+            class="toggle-password"
+            data-password-target="confirmPassword">
+            SHOW
+          </button>
+
+        </div>
       </div>
 
-      <p id="registerMessage" role="status" aria-live="polite"></p>
 
-      <button type="submit" class="btn btn-primary" style="width:100%;">
+      <div class="terms-row">
+
+        <input
+          type="checkbox"
+          id="terms"
+          name="terms"
+          required>
+
+        <label for="terms">
+          I agree to the DarjeelingHost
+          <a href="terms.html">Terms and Conditions</a>
+          and
+          <a href="privacy.html">Privacy Policy</a>.
+        </label>
+
+      </div>
+
+
+      <button
+        type="submit"
+        class="register-submit">
         Create Account
       </button>
 
     </form>
 
-    <p style="text-align:center;margin-top:22px;font-size:14px;">
+
+    <div class="approval-note">
+      <strong>Account approval:</strong>
+      All new driver and travel agent accounts are initially
+      pending. An administrator must review and approve
+      your registration before you can use the platform.
+    </div>
+
+
+    <div class="register-footer">
       Already registered?
-      <a href="login.html"
-         style="color:var(--secondary);font-weight:bold;">
-        Login here
-      </a>
-    </p>
+      <a href="login.html">Login Here</a>
+    </div>
 
   </div>
 
 </main>
 
-<footer>
-  <div class="container footer-content">
-    <strong>DarjeelingHost</strong>
-    <p>© <span id="year"></span> DarjeelingHost</p>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>
+      © <span data-current-year></span>
+      DarjeelingHost. All rights reserved.
+    </p>
   </div>
 </footer>
 
+
 <script>
-  document.getElementById("year").textContent =
-    new Date().getFullYear();
+  document.querySelectorAll("[data-password-target]")
+    .forEach(button => {
 
-  const form = document.getElementById("registerForm");
-  const message = document.getElementById("registerMessage");
+      button.addEventListener("click", () => {
 
-  form.addEventListener("submit", function(event) {
-    event.preventDefault();
+        const targetId =
+          button.dataset.passwordTarget;
 
-    const password =
-      document.getElementById("password").value;
+        const input =
+          document.getElementById(targetId);
 
-    const confirmPassword =
-      document.getElementById("confirmPassword").value;
+        if (!input) return;
 
-    if (password !== confirmPassword) {
-      message.style.color = "#c0392b";
-      message.textContent = "Passwords do not match.";
-      return;
-    }
+        const showPassword =
+          input.type === "password";
 
-    message.style.color = "#1769aa";
-    message.textContent =
-      "Registration interface is ready. Firebase registration will be connected in the next development stage.";
-  });
+        input.type =
+          showPassword ? "text" : "password";
+
+        button.textContent =
+          showPassword ? "HIDE" : "SHOW";
+
+      });
+
+    });
 </script>
+
+<script type="module" src="js/auth.js"></script>
+<script src="js/main.js"></script>
 
 </body>
 </html>
