@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b46">
+  <title>Owner Management | DarjeelingHost</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #f3f6fa;
+      color: #24364a;
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      background: #102b46;
+      color: white;
+      padding: 20px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      color: #cbd9e7;
+      font-size: 13px;
+    }
+
+    main {
+      width: min(900px, 94%);
+      margin: 28px auto;
+    }
+
+    .card {
+      background: white;
+      padding: 22px;
+      margin-bottom: 20px;
+      border: 1px solid #e0e7ef;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #102b46;
+      font-size: 19px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #d4dce6;
+      border-radius: 7px;
+      font-size: 15px;
+      margin-bottom: 13px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 7px;
+      padding: 12px 17px;
+      background: #1769aa;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .danger {
+      background: #b83232;
+    }
+
+    .secondary {
+      background: #526579;
+    }
+
+    .message {
+      display: none;
+      padding: 12px;
+      border-radius: 7px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .message.success {
+      display: block;
+      background: #e8f7ed;
+      color: #176b39;
+    }
+
+    .message.error {
+      display: block;
+      background: #fff0f0;
+      color: #a32c2c;
+    }
+
+    .message.info {
+      display: block;
+      background: #eaf3ff;
+      color: #245b91;
+    }
+
+    .owner-info {
+      background: #edf4fb;
+      border-radius: 8px;
+      padding: 14px;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .admin-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #e8edf2;
+      padding: 14px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .admin-item:last-child {
+      border-bottom: 0;
+    }
+
+    .admin-email {
+      font-weight: bold;
+    }
+
+    .admin-status {
+      color: #21804a;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: #718096;
+      font-size: 12px;
+    }
+
+    @media(max-width: 550px) {
+      .admin-item {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .card {
+        padding: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>DarjeelingHost</h1>
+  <p>Primary Owner Management Console</p>
+</header>
+
+<main>
+
+  <div id="pageMessage" class="message" role="status"></div>
+
+  <section id="loadingCard" class="card">
+    Checking owner permissions...
+  </section>
+
+  <div id="ownerContent" class="hidden">
+
+    <section class="card">
+      <h2>Primary Owner</h2>
+
+      <div class="owner-info">
+        <strong>Owner account:</strong>
+        <div id="ownerEmail">darjeelinghost@gmail.com</div>
+
+        <strong>Access:</strong>
+        <div>Primary Owner — protected</div>
+
+        <strong>Signed in as:</strong>
+        <div id="signedInEmail"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Add Super Admin</h2>
+
+      <p>
+        The person must already have a registered,
+        active DarjeelingHost account with a verified email.
+      </p>
+
+      <form id="addAdminForm">
+        <label for="newAdminEmail">Registered email address</label>
+
+        <input
+          type="email"
+          id="newAdminEmail"
+          placeholder="person@example.com"
+          autocomplete="off"
+          required>
+
+        <button id="addAdminButton" type="submit">
+          Grant Super Admin Access
+        </button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Additional Super Admins</h2>
+
+      <p>
+        The primary owner can revoke additional Super Admin
+        access. The primary owner account cannot be revoked here.
+      </p>
+
+      <div class="actions">
+        <button id="refreshAdmins" class="secondary" type="button">
+          Refresh List
+        </button>
+      </div>
+
+      <div id="adminList" style="margin-top:15px">
+        Loading administrators...
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Account</h2>
+
+      <button id="ownerLogout" class="secondary" type="button">
+        Sign Out
+      </button>
+    </section>
+
+  </div>
+
+</main>
+
+<footer>
+  DarjeelingHost V1 · Protected Owner Console
+</footer>
+
+<script type="module" src="js/owner-management.js"></script>
+
+</body>
+</html>
