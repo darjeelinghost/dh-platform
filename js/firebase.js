@@ -13,6 +13,12 @@ import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+  sendEmailVerification,
+  reload,
   signOut,
   onAuthStateChanged,
   setPersistence,
@@ -54,25 +60,28 @@ const app = getApps().length
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Keep users signed in across browser sessions.
 const persistenceReady = setPersistence(
   auth,
   browserLocalPersistence
 ).catch((error) => {
-  console.error(
-    "Firebase persistence setup failed:",
-    error
-  );
+  console.error("Firebase persistence error:", error);
 });
 
 // ============================================
-// USER PROFILE CONFIGURATION
+// GOOGLE AUTHENTICATION PROVIDER
 // ============================================
 
-const ALLOWED_ROLES = [
-  "driver",
-  "broker"
-];
+const googleProvider = new GoogleAuthProvider();
+
+googleProvider.setCustomParameters({
+  prompt: "select_account"
+});
+
+// ============================================
+// PROFILE CONFIGURATION
+// ============================================
+
+const ALLOWED_ROLES = ["driver", "broker"];
 
 const ALLOWED_PROFILE_FIELDS = [
   "displayName",
@@ -87,7 +96,7 @@ const ALLOWED_PROFILE_FIELDS = [
 ];
 
 // ============================================
-// HELPER FUNCTIONS
+// HELPERS
 // ============================================
 
 function requireValue(value, fieldName) {
@@ -116,15 +125,11 @@ function cleanProfileData(data = {}) {
 
 function getUsersCollectionReference(uid) {
   requireValue(uid, "User ID");
-
   return doc(db, "users", uid);
 }
 
 // ============================================
-// REGISTER USER
-// Supports:
-// registerUser({ email, password, ...profile })
-// registerUser(email, password, profile)
+// EMAIL/PASSWORD REGISTRATION
 // ============================================
 
 async function registerUser(
@@ -142,25 +147,17 @@ async function registerUser(
     typeof emailOrData === "object" &&
     emailOrData !== null
   ) {
-    const data = emailOrData;
+    profile = { ...emailOrData };
 
-    email = data.email;
-    userPassword = data.password;
-
-    profile = {
-      ...data
-    };
+    email = profile.email;
+    userPassword = profile.password;
 
     delete profile.email;
     delete profile.password;
-
   } else {
     email = emailOrData;
     userPassword = password;
-
-    profile = {
-      ...additionalProfile
-    };
+    profile = { ...additionalProfile };
   }
 
   requireValue(email, "Email");
@@ -181,7 +178,6 @@ async function registerUser(
 
   requireValue(displayName, "Full name");
 
-  // Create Firebase Authentication account.
   const credential = await createUserWithEmailAndPassword(
     auth,
     String(email).trim(),
@@ -191,7 +187,6 @@ async function registerUser(
   const user = credential.user;
 
   try {
-    // Create the initial Firestore user profile.
     await createUserProfile(user, {
       displayName,
       phone: profile.phone || "",
@@ -207,29 +202,22 @@ async function registerUser(
     };
 
   } catch (error) {
-    console.error(
-      "User profile creation failed:",
-      error
-    );
+    console.error("Profile creation failed:", error);
 
-    // Avoid leaving an orphaned Authentication account.
     try {
       await deleteUser(user);
     } catch (deleteError) {
-      console.error(
-        "Could not roll back Authentication account:",
-        deleteError
-      );
+      console.error("Account rollback failed:", deleteError);
     }
 
     throw new Error(
-      "Your account profile could not be created. Please try again or contact support."
+      "Your profile could not be created. Please try again or contact support."
     );
   }
 }
 
 // ============================================
-// LOGIN USER
+// EMAIL/PASSWORD LOGIN
 // ============================================
 
 async function loginUser(email, password) {
@@ -248,7 +236,117 @@ async function loginUser(email, password) {
 }
 
 // ============================================
-// LOGOUT USER
+// GOOGLE SIGN-IN
+// ============================================
+
+async function signInWithGoogle() {
+  await persistenceReady;
+
+  try {
+    const credential = await signInWithPopup(
+      auth,
+      googleProvider
+    );
+
+    return {
+      user: credential.user,
+      method: "popup",
+      redirected: false
+    };
+
+  } catch (error) {
+    const redirectErrors = [
+      "auth/popup-blocked",
+      "auth/popup-closed-by-user",
+      "auth/operation-not-supported-in-this-environment",
+      "auth/web-storage-unsupported"
+    ];
+
+    if (redirectErrors.includes(error.code)) {
+      await signInWithRedirect(
+        auth,
+        googleProvider
+      );
+
+      return {
+        user: null,
+        method: "redirect",
+        redirected: true
+      };
+    }
+
+    throw error;
+  }
+}
+
+// ============================================
+// HANDLE GOOGLE REDIRECT RESULT
+// ============================================
+
+async function getGoogleRedirectResult() {
+  await persistenceReady;
+
+  try {
+    const result = await getRedirectResult(auth);
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      user: result.user,
+      method: "redirect",
+      redirected: false
+    };
+
+  } catch (error) {
+    console.error(
+      "Google redirect sign-in failed:",
+      error
+    );
+
+    throw error;
+  }
+}
+
+// ============================================
+// EMAIL VERIFICATION
+// ============================================
+
+async function sendVerificationEmail(user = auth.currentUser) {
+  if (!user) {
+    throw new Error(
+      "Please sign in before requesting verification."
+    );
+  }
+
+  await sendEmailVerification(user, {
+    url: window.location.origin + "/login.html",
+    handleCodeInApp: false
+  });
+
+  return true;
+}
+
+// ============================================
+// REFRESH USER VERIFICATION STATUS
+// ============================================
+
+async function refreshAuthUser(user = auth.currentUser) {
+  if (!user) {
+    throw new Error("No authenticated user found.");
+  }
+
+  await reload(user);
+
+  return {
+    user,
+    emailVerified: user.emailVerified
+  };
+}
+
+// ============================================
+// LOGOUT
 // ============================================
 
 async function logoutUser() {
@@ -276,9 +374,8 @@ function observeAuth(callback) {
 async function getUserProfile(uid = auth.currentUser?.uid) {
   requireValue(uid, "User ID");
 
-  const userReference = getUsersCollectionReference(uid);
-
-  const snapshot = await getDoc(userReference);
+  const reference = getUsersCollectionReference(uid);
+  const snapshot = await getDoc(reference);
 
   if (!snapshot.exists()) {
     return null;
@@ -310,14 +407,11 @@ async function createUserProfile(userOrUid, profileData = {}) {
   const role = profileData.role || "driver";
 
   if (!ALLOWED_ROLES.includes(role)) {
-    throw new Error(
-      "Invalid registration role."
-    );
+    throw new Error("Invalid registration role.");
   }
 
-  const userReference = getUsersCollectionReference(uid);
-
-  const existingProfile = await getDoc(userReference);
+  const reference = getUsersCollectionReference(uid);
+  const existingProfile = await getDoc(reference);
 
   if (existingProfile.exists()) {
     throw new Error(
@@ -345,15 +439,13 @@ async function createUserProfile(userOrUid, profileData = {}) {
     updatedAt: serverTimestamp()
   };
 
-  await setDoc(userReference, profile);
+  await setDoc(reference, profile);
 
   return profile;
 }
 
 // ============================================
 // UPDATE USER PROFILE
-// Users cannot change their own role,
-// account status or verification status.
 // ============================================
 
 async function updateUserProfile(uid, updates = {}) {
@@ -383,10 +475,8 @@ async function updateUserProfile(uid, updates = {}) {
 
   safeUpdates.updatedAt = serverTimestamp();
 
-  const userReference = getUsersCollectionReference(uid);
-
   await updateDoc(
-    userReference,
+    getUsersCollectionReference(uid),
     safeUpdates
   );
 
@@ -394,7 +484,7 @@ async function updateUserProfile(uid, updates = {}) {
 }
 
 // ============================================
-// EXPORT FIREBASE SERVICES
+// EXPORTS
 // ============================================
 
 export {
@@ -407,6 +497,11 @@ export {
   loginUser,
   logoutUser,
   observeAuth,
+
+  signInWithGoogle,
+  getGoogleRedirectResult,
+  sendVerificationEmail,
+  refreshAuthUser,
 
   getUserProfile,
   createUserProfile,
