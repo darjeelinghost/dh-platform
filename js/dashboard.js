@@ -2,45 +2,61 @@
 import { auth, db, getUserProfile } from "./firebase.js";
 
 import {
+  getIdTokenResult
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
+import {
   collection,
   getDocs
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
-
-/* =========================================
-   1. DASHBOARD INITIALISATION
-========================================= */
+// ============================================
+// DARJEELINGHOST V1 - USER DASHBOARD
+// Role normalisation and administrator routing
+// ============================================
 
 let currentUser = null;
 let currentProfile = null;
 let allTrips = [];
 
-const tripContainer =
-  document.querySelector(
-    "[data-trip-list], #tripList, #availableTrips, #tripResults"
-  );
+const tripContainer = document.querySelector(
+  "[data-trip-list], #tripList, #availableTrips, #tripResults"
+);
 
-const searchInput =
-  document.querySelector(
-    "#tripSearch, #searchTrips, [name='tripSearch']"
-  );
+const searchInput = document.querySelector(
+  "#tripSearch, #searchTrips, [name='tripSearch']"
+);
 
-const vehicleFilter =
-  document.querySelector(
-    "#vehicleFilter, #vehicleTypeFilter"
-  );
+const vehicleFilter = document.querySelector(
+  "#vehicleFilter, #vehicleTypeFilter"
+);
 
+// ============================================
+// ROLE HELPERS
+// ============================================
 
-/* =========================================
-   2. SAFE TEXT HELPERS
-========================================= */
+function normaliseRole(role) {
+  const value = String(role || "").trim().toLowerCase();
+
+  if (value === "superadmin" || value === "super_admin") {
+    return "superadmin";
+  }
+
+  if (value === "admin") return "admin";
+  if (value === "driver") return "driver";
+  if (value === "broker") return "broker";
+
+  return "";
+}
+
+// ============================================
+// DOM HELPERS
+// ============================================
 
 function createElement(tag, className, text) {
   const element = document.createElement(tag);
 
-  if (className) {
-    element.className = className;
-  }
+  if (className) element.className = className;
 
   if (text !== undefined && text !== null) {
     element.textContent = String(text);
@@ -49,53 +65,11 @@ function createElement(tag, className, text) {
   return element;
 }
 
-function formatMoney(value) {
-  const amount = Number(value);
-
-  if (!Number.isFinite(amount)) {
-    return "Fare not specified";
-  }
-
-  return "₹" + amount.toLocaleString("en-IN");
-}
-
-function formatDate(value) {
-  if (!value) return "Date not specified";
-
-  let date;
-
-  if (typeof value === "string") {
-    date = new Date(value + (
-      /^\d{4}-\d{2}-\d{2}$/.test(value) ? "T00:00:00" : ""
-    ));
-  } else if (value.toDate) {
-    date = value.toDate();
-  } else {
-    date = new Date(value);
-  }
-
-  if (Number.isNaN(date.getTime())) {
-    return "Date not specified";
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric"
-  });
-}
-
-function normalise(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-
-/* =========================================
-   3. SHOW DASHBOARD MESSAGE
-========================================= */
-
 function showDashboardMessage(message, type = "info") {
-  if (!tripContainer) return;
+  if (!tripContainer) {
+    console.log(message);
+    return;
+  }
 
   tripContainer.replaceChildren();
 
@@ -117,10 +91,53 @@ function showDashboardMessage(message, type = "info") {
   tripContainer.appendChild(box);
 }
 
+function normalise(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
-/* =========================================
-   4. LOAD USER INFORMATION
-========================================= */
+function formatMoney(value) {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "Fare not specified";
+  }
+
+  return "₹" + amount.toLocaleString("en-IN");
+}
+
+function formatDate(value) {
+  if (!value) return "Date not specified";
+
+  let date;
+
+  if (typeof value === "string") {
+    date = new Date(
+      value + (
+        /^\d{4}-\d{2}-\d{2}$/.test(value)
+          ? "T00:00:00"
+          : ""
+      )
+    );
+  } else if (value.toDate) {
+    date = value.toDate();
+  } else {
+    date = new Date(value);
+  }
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date not specified";
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+// ============================================
+// LOAD AND VERIFY CURRENT USER
+// ============================================
 
 async function loadCurrentUser() {
   currentUser = auth.currentUser;
@@ -130,10 +147,46 @@ async function loadCurrentUser() {
     return false;
   }
 
+  // Always refresh claims before checking permissions.
+  const tokenResult = await getIdTokenResult(
+    currentUser,
+    true
+  );
+
+  const claims = tokenResult.claims || {};
+
+  // Actual Firebase administrator permissions take priority.
+  if (claims.superadmin === true) {
+    window.location.replace("admin.html");
+    return false;
+  }
+
+  if (claims.admin === true) {
+    window.location.replace("admin.html");
+    return false;
+  }
+
   currentProfile = await getUserProfile(currentUser.uid);
 
   if (!currentProfile) {
-    throw new Error("Your user profile could not be found.");
+    throw new Error(
+      "Your user profile could not be found."
+    );
+  }
+
+  const role = normaliseRole(currentProfile.role);
+
+  // A profile role alone does not grant administrator access.
+  if (role === "superadmin" || role === "admin") {
+    throw new Error(
+      "Your profile identifies you as an administrator, but Firebase administrator permissions have not been activated. Please complete the secure Super Admin setup."
+    );
+  }
+
+  if (!["driver", "broker"].includes(role)) {
+    throw new Error(
+      "Your account does not have a valid role. Contact platform support."
+    );
   }
 
   if (currentProfile.status !== "active") {
@@ -141,24 +194,25 @@ async function loadCurrentUser() {
     return false;
   }
 
-  if (!["driver", "broker", "admin", "superadmin"]
-      .includes(currentProfile.role)) {
-    throw new Error("Your account does not have a valid role.");
+  if (!currentUser.emailVerified) {
+    window.location.replace("login.html");
+    return false;
   }
+
+  // Use the normalised role throughout the dashboard.
+  currentProfile.role = role;
 
   return true;
 }
 
-
-/* =========================================
-   5. LOAD TRIPS FROM FIRESTORE
-========================================= */
+// ============================================
+// LOAD AVAILABLE TRIPS
+// ============================================
 
 async function loadTrips() {
   if (!tripContainer) {
     console.warn(
-      "Trip listing container not found. " +
-      "Add an element with id='tripList' to dashboard.html."
+      "Trip listing container not found."
     );
     return;
   }
@@ -170,7 +224,7 @@ async function loadTrips() {
       collection(db, "trips")
     );
 
-    allTrips = snapshot.docs.map(document => ({
+    allTrips = snapshot.docs.map((document) => ({
       id: document.id,
       ...document.data()
     }));
@@ -187,43 +241,44 @@ async function loadTrips() {
   }
 }
 
-
-/* =========================================
-   6. DETERMINE TRIP AVAILABILITY
-========================================= */
+// ============================================
+// TRIP AVAILABILITY
+// ============================================
 
 function isAvailableTrip(trip) {
   const status = normalise(trip.status);
 
-  const availableStatuses = [
-    "open",
-    "available",
-    "posted"
-  ];
-
-  if (!availableStatuses.includes(status)) {
+  if (!["open", "available", "posted"].includes(status)) {
     return false;
   }
 
-  if (trip.archived === true || trip.deleted === true) {
+  if (
+    trip.archived === true ||
+    trip.deleted === true ||
+    trip.isDeleted === true
+  ) {
     return false;
   }
 
-  if (trip.isDeleted === true) {
-    return false;
-  }
-
-  if (trip.assignedDriverId) {
-    return false;
-  }
-
-  if (trip.assignedDriver) {
+  if (
+    trip.assignedDriverUid ||
+    trip.assignedDriverId ||
+    trip.assignedDriver
+  ) {
     return false;
   }
 
   if (
     currentProfile &&
-    trip.postedBy === currentUser.uid
+    trip.posterUid === currentUser.uid
+  ) {
+    return false;
+  }
+
+  // Only approved listings should appear in the marketplace.
+  if (
+    trip.moderationStatus &&
+    normalise(trip.moderationStatus) !== "approved"
   ) {
     return false;
   }
@@ -231,19 +286,16 @@ function isAvailableTrip(trip) {
   return true;
 }
 
-
-/* =========================================
-   7. SEARCH AND FILTER
-========================================= */
+// ============================================
+// SEARCH AND FILTER
+// ============================================
 
 function filterTrips() {
   const search = normalise(searchInput?.value);
   const selectedVehicle = normalise(vehicleFilter?.value);
 
-  return allTrips.filter(trip => {
-    if (!isAvailableTrip(trip)) {
-      return false;
-    }
+  return allTrips.filter((trip) => {
+    if (!isAvailableTrip(trip)) return false;
 
     const searchableText = [
       trip.id,
@@ -267,10 +319,9 @@ function filterTrips() {
   });
 }
 
-
-/* =========================================
-   8. BUILD TRIP CARD
-========================================= */
+// ============================================
+// CREATE TRIP CARD
+// ============================================
 
 function createTripCard(trip) {
   const card = createElement("article", "trip-card");
@@ -296,13 +347,13 @@ function createTripCard(trip) {
   const date = createElement(
     "p",
     "trip-date",
-    `Travel Date: ${formatDate(trip.travelDate || trip.date)}`
+    `Travel Date: ${formatDate(trip.travelDate)}`
   );
 
   const time = createElement(
     "p",
     "trip-time",
-    `Pickup Time: ${trip.pickupTime || "Not specified"}`
+    `Pickup Time: ${trip.travelTime || "Not specified"}`
   );
 
   const pickup = createElement(
@@ -320,7 +371,7 @@ function createTripCard(trip) {
   const seats = createElement(
     "p",
     "trip-seats",
-    `Passenger Seats: ${trip.seats ?? trip.passengerSeats ?? "Not specified"}`
+    `Passenger Seats: ${trip.seats ?? "Not specified"}`
   );
 
   const type = createElement(
@@ -352,10 +403,13 @@ function createTripCard(trip) {
   const poster = createElement(
     "p",
     "trip-poster",
-    `Posted by: ${trip.postedByName || "Platform user"}`
+    `Posted by: ${trip.posterName || "Platform user"}`
   );
 
-  const details = createElement("div", "trip-information");
+  const details = createElement(
+    "div",
+    "trip-information"
+  );
 
   details.append(
     date,
@@ -389,20 +443,14 @@ function createTripCard(trip) {
     window.location.href = url.toString();
   });
 
-  card.append(
-    tripId,
-    heading,
-    details,
-    button
-  );
+  card.append(tripId, heading, details, button);
 
   return card;
 }
 
-
-/* =========================================
-   9. DISPLAY TRIPS
-========================================= */
+// ============================================
+// DISPLAY TRIPS
+// ============================================
 
 function renderTrips() {
   if (!tripContainer) return;
@@ -425,17 +473,16 @@ function renderTrips() {
     return;
   }
 
-  filteredTrips.forEach(trip => {
+  filteredTrips.forEach((trip) => {
     tripContainer.appendChild(
       createTripCard(trip)
     );
   });
 }
 
-
-/* =========================================
-   10. CONNECT SEARCH AND FILTERS
-========================================= */
+// ============================================
+// SEARCH EVENTS
+// ============================================
 
 if (searchInput) {
   searchInput.addEventListener("input", renderTrips);
@@ -445,10 +492,14 @@ if (vehicleFilter) {
   vehicleFilter.addEventListener("change", renderTrips);
 }
 
+document.querySelector("#searchTrips")?.addEventListener(
+  "click",
+  renderTrips
+);
 
-/* =========================================
-   11. DASHBOARD INITIALISATION
-========================================= */
+// ============================================
+// INITIALISE DASHBOARD
+// ============================================
 
 async function initialiseDashboard() {
   try {
@@ -470,13 +521,17 @@ async function initialiseDashboard() {
     );
 
     if (roleElement) {
-      roleElement.textContent = currentProfile.role;
+      roleElement.textContent =
+        currentProfile.role.toUpperCase();
     }
 
     await loadTrips();
 
   } catch (error) {
-    console.error("Dashboard initialisation error:", error);
+    console.error(
+      "Dashboard initialisation error:",
+      error
+    );
 
     showDashboardMessage(
       error.message || "Unable to initialise your dashboard.",
@@ -485,21 +540,24 @@ async function initialiseDashboard() {
   }
 }
 
-
-/* =========================================
-   12. START DASHBOARD
-========================================= */
+// ============================================
+// START
+// ============================================
 
 auth.authStateReady()
   .then(initialiseDashboard)
-  .catch(error => {
+  .catch((error) => {
     console.error("Authentication error:", error);
+
+    showDashboardMessage(
+      "Unable to verify your login. Please sign in again.",
+      "error"
+    );
   });
 
-
-/* =========================================
-   13. EXPOSE DASHBOARD FUNCTIONS
-========================================= */
+// ============================================
+// PUBLIC DASHBOARD HELPERS
+// ============================================
 
 window.DarjDashboard = {
   refresh: loadTrips,
