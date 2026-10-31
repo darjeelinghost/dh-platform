@@ -4,16 +4,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /* =====================================
-       1. AUTHENTICATION AND ROLE HELPERS
-    ===================================== */
+    // ==========================================
+    // AUTHENTICATION HELPERS
+    // ==========================================
 
     function signedIn() {
       return request.auth != null;
     }
 
     function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
+      return signedIn() &&
+        request.auth.uid == uid;
     }
 
     function isAdmin() {
@@ -44,49 +45,29 @@ service cloud.firestore {
         ).data.status == 'active';
     }
 
-    function isDriver() {
-      return activeUser() &&
-        get(
-          /databases/$(database)/documents/users/$(request.auth.uid)
-        ).data.role == 'driver';
+    function validUserRole(role) {
+      return role in ['driver', 'broker'];
     }
 
-    function isBroker() {
-      return activeUser() &&
-        get(
-          /databases/$(database)/documents/users/$(request.auth.uid)
-        ).data.role == 'broker';
-    }
-
-
-    /* =====================================
-       2. USER PROFILES
-       Collection: users
-    ===================================== */
+    // ==========================================
+    // USER ACCOUNTS
+    // ==========================================
 
     match /users/{uid} {
 
-      // Users can read their own profile.
-      // Privileged administrators can read all profiles.
+      // A user can read their own profile.
+      // Administrators can read user profiles.
       allow get: if isOwner(uid) || isPrivileged();
 
-      // Only administrators can list all user profiles.
+      // Only administrators can list users.
       allow list: if isPrivileged();
 
-      // Public registration creates only pending
-      // driver or broker accounts.
+      // Public registration: driver or broker only.
       allow create: if isOwner(uid)
-        && request.resource.data.keys().hasAll([
-          'uid',
-          'displayName',
-          'phone',
-          'email',
-          'role',
-          'status',
-          'verificationStatus',
-          'createdAt',
-          'updatedAt'
-        ])
+        && request.resource.data.uid == uid
+        && validUserRole(request.resource.data.role)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.verificationStatus == 'pending'
         && request.resource.data.keys().hasOnly([
           'uid',
           'displayName',
@@ -99,19 +80,19 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
-        && request.resource.data.uid == uid
-        && request.resource.data.email == request.auth.token.email
-        && request.resource.data.role in ['driver', 'broker']
-        && request.resource.data.status == 'pending'
-        && request.resource.data.verificationStatus == 'pending'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
-      // Users can update only ordinary profile fields.
-      // Role, status, verification and identity fields
-      // cannot be changed through this permission.
-      allow update: if isOwner(uid)
-        && resource.data.status == 'active'
+      // Ordinary users can update permitted profile fields only.
+      // Role and account status are protected.
+      allow update: if (
+        isOwner(uid)
+        && activeUser()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.verificationStatus ==
+          resource.data.verificationStatus
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
@@ -122,55 +103,53 @@ service cloud.firestore {
             'operatingArea',
             'experience',
             'introduction',
+            'vehicle',
+            'photoURL',
             'updatedAt'
           ])
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.updatedAt == request.time
+      ) || isPrivileged();
 
-      // Account deletion is handled through trusted
-      // administrative backend operations.
+      // User accounts cannot be deleted from the client.
       allow delete: if false;
     }
 
-
-    /* =====================================
-       3. TRIPS
-       Collection: trips
-    ===================================== */
+    // ==========================================
+    // TRIPS
+    // ==========================================
 
     match /trips/{tripId} {
 
-      // Active users can view trip listings.
-      // Administrators can also access them.
-      allow read: if activeUser() || isPrivileged();
+      // Open trips are visible to active users.
+      // Trip parties and administrators can access
+      // their relevant records.
+      allow read: if (
+        activeUser()
+        && resource.data.status == 'open'
+      ) || (
+        signedIn()
+        && (
+          resource.data.postedBy == request.auth.uid
+          || resource.data.assignedDriverId == request.auth.uid
+        )
+      ) || isPrivileged();
 
-      // Active drivers and brokers can create trips.
+      // Active users can create their own trip posts.
       allow create: if activeUser()
         && request.resource.data.postedBy == request.auth.uid
         && request.resource.data.status == 'open'
-        && request.resource.data.keys().hasAll([
-          'postedBy',
-          'source',
-          'destination',
-          'travelDate',
-          'tripType',
-          'vehicleType',
-          'fare',
-          'status',
-          'createdAt',
-          'updatedAt'
-        ])
         && request.resource.data.keys().hasOnly([
           'postedBy',
-          'postedByName',
+          'posterName',
+          'posterRole',
+          'pickupLocation',
           'source',
           'destination',
-          'pickupLocation',
           'travelDate',
           'pickupTime',
           'tripType',
           'description',
           'vehicleType',
-          'seats',
           'passengerSeats',
           'fare',
           'negotiable',
@@ -178,268 +157,218 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
-        && request.resource.data.fare is number
-        && request.resource.data.fare >= 0
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
-      // Trip assignment, completion, cancellation
-      // and other critical changes must use trusted
-      // backend operations.
-      //
-      // The trip poster can archive or restore their
-      // own completed trip without permanently deleting it.
-      allow update: if activeUser()
+      // Ordinary users can only archive or restore
+      // their own completed trip.
+      // Assignment and completion are server-controlled.
+      allow update: if (
+        activeUser()
         && resource.data.postedBy == request.auth.uid
         && resource.data.status == 'completed'
+        && request.resource.data.status in [
+          'archived',
+          'completed'
+        ]
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
-            'archived',
+            'status',
             'archivedAt',
             'updatedAt'
           ])
         && request.resource.data.updatedAt == request.time
-        && (
-          (
-            request.resource.data.archived == true
-            && request.resource.data.archivedAt == request.time
-          )
-          ||
-          (
-            request.resource.data.archived == false
-            && request.resource.data.archivedAt == null
-          )
-        );
+      ) || isPrivileged();
 
-      // Trips are soft-archived, never permanently
-      // deleted by normal client operations.
+      // Permanent deletion is not allowed from the client.
       allow delete: if false;
     }
 
-
-    /* =====================================
-       4. TRIP REQUESTS
-       Collection: tripRequests
-    ===================================== */
+    // ==========================================
+    // TRIP REQUESTS
+    // ==========================================
 
     match /tripRequests/{requestId} {
 
       function tripExists() {
-        return request.resource.data.tripId is string
-          && exists(
-            /databases/$(database)/documents/trips/$(request.resource.data.tripId)
-          );
+        return exists(
+          /databases/$(database)/documents/trips/$(request.resource.data.tripId)
+        );
       }
 
-      // Only the requesting driver, trip poster,
-      // or privileged administrator can read a request.
-      allow read: if activeUser() && (
-        resource.data.driverId == request.auth.uid
-        ||
-        get(
-          /databases/$(database)/documents/trips/$(resource.data.tripId)
-        ).data.postedBy == request.auth.uid
-        ||
-        isPrivileged()
-      );
+      function tripIsNotOwnedByRequester() {
+        return tripExists()
+          && get(
+            /databases/$(database)/documents/trips/$(request.resource.data.tripId)
+          ).data.postedBy != request.auth.uid;
+      }
 
-      // Only active drivers can submit requests
-      // for another user's open trip.
-      allow create: if isDriver()
-        && tripExists()
+      function tripIsOpen() {
+        return tripExists()
+          && get(
+            /databases/$(database)/documents/trips/$(request.resource.data.tripId)
+          ).data.status == 'open';
+      }
+
+      allow create: if activeUser()
         && request.resource.data.driverId == request.auth.uid
         && request.resource.data.status == 'pending'
-        && request.resource.data.keys().hasAll([
-          'tripId',
-          'driverId',
-          'status',
-          'createdAt'
-        ])
+        && tripIsNotOwnedByRequester()
+        && tripIsOpen()
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.role == 'driver'
         && request.resource.data.keys().hasOnly([
           'tripId',
           'driverId',
-          'status',
+          'driverName',
           'message',
-          'offerFare',
-          'createdAt'
+          'offerAmount',
+          'status',
+          'createdAt',
+          'updatedAt'
         ])
-        && get(
-          /databases/$(database)/documents/trips/$(request.resource.data.tripId)
-        ).data.status == 'open'
-        && get(
-          /databases/$(database)/documents/trips/$(request.resource.data.tripId)
-        ).data.postedBy != request.auth.uid
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
 
-      // Acceptance, rejection and assignment are
-      // handled through trusted backend operations.
+      allow read: if signedIn()
+        && (
+          resource.data.driverId == request.auth.uid
+          || (
+            exists(
+              /databases/$(database)/documents/trips/$(resource.data.tripId)
+            )
+            && get(
+              /databases/$(database)/documents/trips/$(resource.data.tripId)
+            ).data.postedBy == request.auth.uid
+          )
+        ) || isPrivileged();
+
+      // Decisions and assignment must be made by
+      // trusted server-side operations.
       allow update, delete: if false;
     }
 
-
-    /* =====================================
-       5. NOTIFICATIONS
-       Collection: notifications
-    ===================================== */
+    // ==========================================
+    // NOTIFICATIONS
+    // ==========================================
 
     match /notifications/{notificationId} {
 
-      // Only the recipient or an administrator
-      // can read a notification.
-      allow read: if activeUser() && (
-        resource.data.recipientId == request.auth.uid
-        || isPrivileged()
-      );
-
-      // Notifications are created by trusted
-      // backend operations, not browser clients.
-      allow create: if false;
-
-      // Recipients may mark their own notifications
-      // as read. They cannot edit the message,
-      // sender or recipient.
-      allow update: if activeUser()
+      allow read: if signedIn()
         && resource.data.recipientId == request.auth.uid
+        || isPrivileged();
+
+      // Only the recipient can mark their notification
+      // as read. They cannot change its message or owner.
+      allow update: if signedIn()
+        && resource.data.recipientId == request.auth.uid
+        && request.resource.data.recipientId ==
+          resource.data.recipientId
         && request.resource.data.diff(resource.data)
           .affectedKeys()
           .hasOnly([
             'read',
             'readAt'
-          ])
-        && request.resource.data.read == true
-        && request.resource.data.readAt == request.time;
+          ]);
 
-      allow delete: if false;
+      // Notifications are created by trusted server code.
+      allow create, delete: if false;
     }
 
-
-    /* =====================================
-       6. PAYMENT RECORDS
-       Collection: paymentRecords
-    ===================================== */
+    // ==========================================
+    // PAYMENT RECORDS
+    // ==========================================
 
     match /paymentRecords/{paymentId} {
 
-      // Only the two trip parties and administrators
-      // can read the payment record.
-      allow read: if activeUser() && (
-        resource.data.driverId == request.auth.uid
-        ||
-        resource.data.posterId == request.auth.uid
-        ||
-        isPrivileged()
-      );
+      allow read: if signedIn()
+        && (
+          resource.data.driverId == request.auth.uid
+          || resource.data.posterId == request.auth.uid
+        ) || isPrivileged();
 
-      // Payment records are created and updated
-      // through trusted backend operations.
+      // Payment changes must be handled by
+      // trusted server-side operations.
       allow create, update, delete: if false;
     }
 
-
-    /* =====================================
-       7. COMPLAINTS
-       Collection: complaints
-    ===================================== */
+    // ==========================================
+    // COMPLAINTS
+    // ==========================================
 
     match /complaints/{complaintId} {
 
-      // Reporter and privileged administrators
-      // can access the complaint.
-      allow read: if activeUser() && (
-        resource.data.reporterId == request.auth.uid
-        ||
-        isPrivileged()
-      );
-
-      // Active users can submit a complaint.
       allow create: if activeUser()
         && request.resource.data.reporterId == request.auth.uid
         && request.resource.data.status == 'open'
-        && request.resource.data.keys().hasAll([
-          'reporterId',
-          'category',
-          'description',
-          'status',
-          'createdAt'
-        ])
         && request.resource.data.keys().hasOnly([
           'reporterId',
           'tripId',
-          'category',
+          'againstUserId',
+          'subject',
           'description',
           'status',
           'createdAt'
         ])
         && request.resource.data.createdAt == request.time;
 
-      // Complaint review and resolution are
-      // handled through trusted backend operations.
+      allow read: if signedIn()
+        && resource.data.reporterId == request.auth.uid
+        || isPrivileged();
+
+      // Complaint decisions are administrator-controlled.
       allow update, delete: if false;
     }
 
-
-    /* =====================================
-       8. DRIVER DOCUMENTS
-       Collection: driverDocuments
-    ===================================== */
+    // ==========================================
+    // DRIVER DOCUMENT METADATA
+    // ==========================================
 
     match /driverDocuments/{documentId} {
 
-      // Only the document owner and privileged
-      // administrators can read document metadata.
-      allow read: if activeUser() && (
-        resource.data.driverId == request.auth.uid
-        ||
-        isPrivileged()
-      );
+      allow read: if signedIn()
+        && (
+          resource.data.ownerId == request.auth.uid
+          || isPrivileged()
+        );
 
-      // Document verification and upload metadata
-      // must be handled through a controlled process.
+      // Document metadata and verification status
+      // are managed through trusted server operations.
       allow create, update, delete: if false;
     }
 
-
-    /* =====================================
-       9. AUDIT LOGS
-       Collection: auditLogs
-    ===================================== */
+    // ==========================================
+    // AUDIT LOGS
+    // ==========================================
 
     match /auditLogs/{logId} {
 
-      // Administrators can read audit records.
       allow read: if isPrivileged();
 
-      // Browser clients cannot create, edit
-      // or delete audit records.
+      // Audit entries must be created by trusted server code.
       allow create, update, delete: if false;
     }
 
-
-    /* =====================================
-       10. PLATFORM SETTINGS
-       Collection: platformSettings
-    ===================================== */
+    // ==========================================
+    // PLATFORM SETTINGS
+    // ==========================================
 
     match /platformSettings/{settingId} {
 
-      // Authenticated active users may read
-      // public platform settings.
-      allow read: if activeUser();
+      allow read: if activeUser() || isPrivileged();
 
-      // All changes must be performed by
-      // trusted backend operations.
+      // Only trusted server operations can change settings.
       allow create, update, delete: if false;
     }
 
-
-    /* =====================================
-       11. DEFAULT DENY
-    ===================================== */
+    // ==========================================
+    // DEFAULT DENY
+    // ==========================================
 
     match /{document=**} {
       allow read, write: if false;
     }
-
   }
 }
