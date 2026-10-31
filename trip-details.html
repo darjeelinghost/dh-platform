@@ -3,123 +3,207 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#102b46">
-  <meta name="description" content="Post and manage trip requirements on DarjeelingHost.">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Post a Trip | DarjeelingHost</title>
 
-  <link rel="stylesheet" href="css/style.css">
-
   <style>
-    .trip-page {
-      max-width: 900px;
-      width: 92%;
-      margin: 35px auto;
+    * {
+      box-sizing: border-box;
     }
 
-    .trip-heading {
-      margin-bottom: 25px;
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f5f7;
+      color: #202b35;
     }
 
-    .trip-heading h1 {
-      color: var(--primary);
-      margin-bottom: 5px;
+    header {
+      background: #173b65;
+      color: white;
+      padding: 17px 22px;
     }
 
-    .trip-heading p {
-      color: var(--muted);
+    header h1 {
+      margin: 0;
+      font-size: 22px;
     }
 
-    .trip-form-card {
+    header p {
+      margin: 6px 0 0;
+      font-size: 13px;
+      opacity: .85;
+    }
+
+    main {
+      max-width: 850px;
+      margin: 28px auto;
+      padding: 0 15px;
+    }
+
+    .card {
       background: white;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 28px;
-      box-shadow: var(--shadow);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 3px 15px rgba(0,0,0,.06);
     }
 
-    .form-section {
-      margin-bottom: 30px;
+    h2 {
+      margin-top: 0;
+      color: #173b65;
     }
 
-    .form-section h2 {
-      color: var(--primary);
-      font-size: 19px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-      margin-bottom: 20px;
+    .intro {
+      color: #687582;
+      line-height: 1.5;
+      font-size: 14px;
     }
 
-    .form-grid {
+    .grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
+      grid-template-columns: 1fr 1fr;
+      gap: 17px;
     }
 
-    .full-width {
+    .field {
+      margin-top: 17px;
+    }
+
+    .full {
       grid-column: 1 / -1;
     }
 
-    .required-note {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 20px;
-    }
-
-    .field-hint {
+    label {
       display: block;
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 5px;
-    }
-
-    .negotiable-options {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      padding: 10px 0;
-    }
-
-    .negotiable-options label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      margin-bottom: 7px;
       font-size: 14px;
+      font-weight: 600;
     }
 
-    .trip-notice {
-      background: #edf5fc;
-      border-radius: 9px;
-      padding: 15px;
-      color: #245b91;
-      font-size: 13px;
-      line-height: 1.6;
-      margin-bottom: 22px;
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccd4dc;
+      border-radius: 7px;
+      font-size: 15px;
+      background: white;
+      color: #202b35;
     }
 
-    .trip-actions {
+    textarea {
+      min-height: 105px;
+      resize: vertical;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #8eb8e8;
+      border-color: #2874c7;
+    }
+
+    .checkbox {
       display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 22px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .checkbox input {
+      width: 18px;
+      height: 18px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
       gap: 12px;
-      flex-wrap: wrap;
+      margin-top: 25px;
     }
 
-    #tripMessage {
+    button, .cancel {
+      border: 0;
+      border-radius: 8px;
+      padding: 13px 21px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .submit {
+      background: #2467c7;
+      color: white;
+    }
+
+    .submit:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .clear {
+      background: #edf0f3;
+      color: #263746;
+    }
+
+    .cancel {
+      background: white;
+      color: #263746;
+      border: 1px solid #ccd4dc;
+    }
+
+    #formMessage {
+      display: none;
+      padding: 13px;
+      border-radius: 7px;
+      margin-top: 20px;
+      line-height: 1.5;
       font-size: 14px;
-      margin-bottom: 15px;
     }
 
-    @media(max-width: 650px) {
-      .form-grid {
+    #formMessage.success {
+      display: block;
+      background: #e7f6ed;
+      color: #176b3a;
+    }
+
+    #formMessage.error {
+      display: block;
+      background: #fdecec;
+      color: #a32626;
+    }
+
+    #formMessage.info {
+      display: block;
+      background: #eaf2fc;
+      color: #214e80;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #71808d;
+      margin-top: 7px;
+    }
+
+    @media (max-width: 620px) {
+      .grid {
         grid-template-columns: 1fr;
       }
 
-      .full-width {
+      .full {
         grid-column: auto;
       }
 
-      .trip-form-card {
+      .card {
         padding: 19px;
+      }
+
+      .actions button,
+      .actions a {
+        flex: 1;
+        text-align: center;
       }
     }
   </style>
@@ -128,359 +212,405 @@
 <body>
 
 <header>
-  <div class="container navbar">
-
-    <a href="index.html" class="brand">
-      Darjeeling<span>Host</span>
-    </a>
-
-    <button class="menu-toggle" id="menuToggle"
-      aria-label="Toggle navigation" aria-expanded="false">
-      ☰
-    </button>
-
-    <nav class="nav-links" id="navLinks">
-      <a href="index.html">Home</a>
-      <a href="dashboard.html">Dashboard</a>
-      <a href="notifications.html">Notifications</a>
-      <a href="driver-profile.html">My Profile</a>
-      <a href="trip-history.html">Trip History</a>
-    </nav>
-
-  </div>
+  <h1>DarjeelingHost</h1>
+  <p>Trip outsourcing and driver network</p>
 </header>
 
-<main class="trip-page">
+<main>
+  <section class="card">
 
-  <div class="trip-heading">
-    <h1>Post a Trip</h1>
-    <p>
-      Provide journey details to find an available driver
-      through DarjeelingHost.
+    <h2>Post a Trip</h2>
+
+    <p class="intro">
+      Share your trip requirements with the DarjeelingHost
+      driver network. Provide accurate travel, vehicle and fare
+      information.
     </p>
-  </div>
-
-  <div class="trip-notice">
-    <strong>Before posting:</strong>
-    Please provide accurate journey information, passenger
-    requirements and the agreed or expected fare.
-  </div>
-
-  <div class="trip-form-card">
 
     <form id="tripForm">
 
-      <p class="required-note">
-        Fields marked with * are required.
-      </p>
+      <div class="grid">
 
-      <!-- JOURNEY INFORMATION -->
-
-      <section class="form-section">
-
-        <h2>1. Journey Information</h2>
-
-        <div class="form-grid">
-
-          <div class="form-group full-width">
-            <label for="pickupLocation">
-              Pickup Point *
-            </label>
-            <input
-              type="text"
-              id="pickupLocation"
-              maxlength="150"
-              placeholder="e.g. Chowk Bazaar, Darjeeling"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="source">Source *</label>
-            <input
-              type="text"
-              id="source"
-              maxlength="150"
-              placeholder="Starting location"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="destination">Destination *</label>
-            <input
-              type="text"
-              id="destination"
-              maxlength="150"
-              placeholder="Destination location"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="travelDate">Travel Date *</label>
-            <input type="date" id="travelDate" required>
-          </div>
-
-          <div class="form-group">
-            <label for="travelTime">Pickup Time *</label>
-            <input type="time" id="travelTime" required>
-          </div>
-
-          <div class="form-group full-width">
-            <label for="tripType">Trip Type *</label>
-            <select id="tripType" required>
-              <option value="">Select trip type</option>
-              <option value="One-way">One-way</option>
-              <option value="Round trip">Round trip</option>
-              <option value="Sightseeing">Sightseeing</option>
-              <option value="Airport transfer">Airport transfer</option>
-              <option value="Local transfer">Local transfer</option>
-              <option value="Custom trip">Custom trip</option>
-            </select>
-          </div>
-
+        <div class="field full">
+          <label for="pickupLocation">Pickup Location *</label>
+          <input
+            id="pickupLocation"
+            name="pickupLocation"
+            placeholder="e.g. Chowk Bazaar"
+            required
+            maxlength="150"
+          >
         </div>
 
-      </section>
-
-      <!-- VEHICLE REQUIREMENTS -->
-
-      <section class="form-section">
-
-        <h2>2. Vehicle Requirements</h2>
-
-        <div class="form-grid">
-
-          <div class="form-group">
-            <label for="vehicleType">Required Vehicle *</label>
-            <select id="vehicleType" required>
-              <option value="">Select vehicle type</option>
-              <option value="Hatchback">Hatchback</option>
-              <option value="Sedan">Sedan</option>
-              <option value="Luxury Vehicle">Luxury Vehicle</option>
-              <option value="Innova">Innova</option>
-              <option value="Innova Crysta">Innova Crysta</option>
-              <option value="Sumo">Sumo</option>
-              <option value="Omni">Omni</option>
-              <option value="Van">Van</option>
-              <option value="Traveller">Traveller</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="seats">Passenger Seats Required *</label>
-            <input
-              type="number"
-              id="seats"
-              min="1"
-              max="50"
-              placeholder="Number of passengers"
-              required
-            >
-          </div>
-
+        <div class="field">
+          <label for="source">Source *</label>
+          <input
+            id="source"
+            name="source"
+            placeholder="Starting location"
+            required
+            maxlength="150"
+          >
         </div>
 
-      </section>
-
-      <!-- FARE INFORMATION -->
-
-      <section class="form-section">
-
-        <h2>3. Fare Information</h2>
-
-        <div class="form-grid">
-
-          <div class="form-group">
-            <label for="fare">Expected Fare (₹) *</label>
-            <input
-              type="number"
-              id="fare"
-              min="1"
-              step="1"
-              placeholder="Enter amount in INR"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label>Is the Fare Negotiable? *</label>
-
-            <div class="negotiable-options">
-              <label>
-                <input
-                  type="radio"
-                  name="negotiable"
-                  value="true"
-                  required
-                >
-                Yes
-              </label>
-
-              <label>
-                <input
-                  type="radio"
-                  name="negotiable"
-                  value="false"
-                  required
-                >
-                No
-              </label>
-            </div>
-          </div>
-
+        <div class="field">
+          <label for="destination">Destination *</label>
+          <input
+            id="destination"
+            name="destination"
+            placeholder="Destination"
+            required
+            maxlength="150"
+          >
         </div>
 
-      </section>
-
-      <!-- DESCRIPTION -->
-
-      <section class="form-section">
-
-        <h2>4. Trip Description</h2>
-
-        <div class="form-grid">
-
-          <div class="form-group full-width">
-            <label for="description">
-              Itinerary and Special Instructions
-            </label>
-
-            <textarea
-              id="description"
-              rows="6"
-              maxlength="2000"
-              placeholder="List sightseeing stops, places to visit, duration, return journey details or special instructions."
-            ></textarea>
-
-            <span class="field-hint">
-              Especially useful for sightseeing and custom trips.
-            </span>
-          </div>
-
+        <div class="field">
+          <label for="travelDate">Travel Date *</label>
+          <input
+            type="date"
+            id="travelDate"
+            name="travelDate"
+            required
+          >
         </div>
 
-      </section>
+        <div class="field">
+          <label for="travelTime">Pickup Time *</label>
+          <input
+            type="time"
+            id="travelTime"
+            name="travelTime"
+            required
+          >
+        </div>
 
-      <!-- TERMS AND SUBMISSION -->
+        <div class="field">
+          <label for="tripType">Trip Type *</label>
+          <select id="tripType" name="tripType" required>
+            <option value="">Select trip type</option>
+            <option value="One-way">One-way</option>
+            <option value="Round trip">Round trip</option>
+            <option value="Sightseeing">Sightseeing</option>
+            <option value="Airport transfer">Airport transfer</option>
+            <option value="Local transfer">Local transfer</option>
+            <option value="Custom trip">Custom trip</option>
+          </select>
+        </div>
 
-      <section class="form-section">
+        <div class="field">
+          <label for="vehicleType">Required Vehicle *</label>
+          <select id="vehicleType" name="vehicleType" required>
+            <option value="">Select vehicle</option>
+            <option value="Hatchback">Hatchback</option>
+            <option value="Sedan">Sedan</option>
+            <option value="Luxury Vehicle">Luxury Vehicle</option>
+            <option value="Innova">Innova</option>
+            <option value="Innova Crysta">Innova Crysta</option>
+            <option value="Sumo">Sumo</option>
+            <option value="Omni">Omni</option>
+            <option value="Van">Van</option>
+            <option value="Traveller">Traveller</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
 
-        <div class="form-group">
-          <label style="display:flex;align-items:flex-start;gap:10px;font-weight:400;">
-            <input
-              type="checkbox"
-              id="confirmDetails"
-              required
-              style="width:auto;margin-top:5px;"
-            >
+        <div class="field">
+          <label for="seats">Passenger Seats *</label>
+          <input
+            type="number"
+            id="seats"
+            name="seats"
+            min="1"
+            max="50"
+            required
+          >
+        </div>
 
-            <span>
-              I confirm that the trip details and fare information
-              provided above are accurate.
-            </span>
+        <div class="field">
+          <label for="fare">Offered Fare (INR) *</label>
+          <input
+            type="number"
+            id="fare"
+            name="fare"
+            min="1"
+            step="1"
+            placeholder="e.g. 2500"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="negotiable">Is the Fare Negotiable? *</label>
+          <select id="negotiable" name="negotiable" required>
+            <option value="">Select option</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label for="description">
+            Itinerary / Additional Details
           </label>
+          <textarea
+            id="description"
+            name="description"
+            maxlength="2000"
+            placeholder="Useful for sightseeing and custom trips, including stops, duration and special instructions."
+          ></textarea>
         </div>
-
-      </section>
-
-      <p id="tripMessage" role="status" aria-live="polite"></p>
-
-      <div class="trip-actions">
-
-        <button type="submit" class="btn btn-primary">
-          Submit Trip
-        </button>
-
-        <button type="reset" class="btn btn-outline">
-          Clear Form
-        </button>
-
-        <a href="dashboard.html" class="btn btn-outline">
-          Cancel
-        </a>
 
       </div>
 
+      <label class="checkbox">
+        <input
+          type="checkbox"
+          id="confirmAccuracy"
+          required
+        >
+        <span>
+          I confirm that the trip details and fare information
+          provided above are accurate.
+        </span>
+      </label>
+
+      <div id="formMessage" role="alert"></div>
+
+      <div class="actions">
+        <button
+          type="submit"
+          class="submit"
+          id="publishBtn"
+        >
+          Submit Trip
+        </button>
+
+        <button
+          type="reset"
+          class="clear"
+        >
+          Clear Form
+        </button>
+
+        <a href="dashboard.html" class="cancel">
+          Cancel
+        </a>
+      </div>
+
     </form>
-
-  </div>
-
+  </section>
 </main>
 
-<footer>
-  <div class="container footer-content">
-    <strong>DarjeelingHost</strong>
-    <p>© <span id="year"></span> DarjeelingHost</p>
-  </div>
-</footer>
+<script type="module">
+  import { auth, db, getUserProfile }
+    from "./js/firebase.js";
 
-<script>
-  document.getElementById("year").textContent =
-    new Date().getFullYear();
+  import {
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
-  // Mobile navigation
+  import {
+    addDoc,
+    collection,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
-  const menuToggle = document.getElementById("menuToggle");
-  const navLinks = document.getElementById("navLinks");
+  const form = document.getElementById("tripForm");
+  const submitButton = document.getElementById("publishBtn");
+  const message = document.getElementById("formMessage");
 
-  menuToggle.addEventListener("click", () => {
-    const isOpen = navLinks.classList.toggle("open");
-    menuToggle.setAttribute("aria-expanded", String(isOpen));
+  let currentUser = null;
+  let currentProfile = null;
+  let authReady = false;
+
+  function showMessage(text, type = "info") {
+    message.textContent = text;
+    message.className = type;
+  }
+
+  function localToday() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  document.getElementById("travelDate").min = localToday();
+
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    currentProfile = null;
+    authReady = true;
+
+    if (!user) {
+      showMessage(
+        "Please sign in before posting a trip.",
+        "error"
+      );
+      submitButton.disabled = true;
+      return;
+    }
+
+    try {
+      currentProfile = await getUserProfile(user.uid);
+
+      if (
+        !user.emailVerified ||
+        !currentProfile ||
+        currentProfile.status !== "active" ||
+        !["driver", "broker"].includes(currentProfile.role)
+      ) {
+        showMessage(
+          "Only approved, active Driver and Broker accounts can post trips.",
+          "error"
+        );
+        submitButton.disabled = true;
+        return;
+      }
+
+      submitButton.disabled = false;
+      showMessage(
+        "Your account is ready. You can submit a trip.",
+        "info"
+      );
+
+    } catch (error) {
+      console.error("Account check failed:", error);
+
+      showMessage(
+        "Unable to verify your account. Please try again.",
+        "error"
+      );
+
+      submitButton.disabled = true;
+    }
   });
 
-  // Set the earliest selectable date to today.
-
-  const dateInput = document.getElementById("travelDate");
-
-  const today = new Date();
-  const localDate = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0")
-  ].join("-");
-
-  dateInput.min = localDate;
-
-  // Form validation interface.
-
-  const tripForm = document.getElementById("tripForm");
-  const tripMessage = document.getElementById("tripMessage");
-
-  tripForm.addEventListener("submit", function(event) {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    if (!tripForm.checkValidity()) {
-      tripForm.reportValidity();
+    if (!authReady || !currentUser || !currentProfile) {
+      showMessage(
+        "Please sign in with an approved account before posting.",
+        "error"
+      );
       return;
     }
 
-    const source = document.getElementById("source").value.trim();
-    const destination = document.getElementById("destination").value.trim();
-    const pickup = document.getElementById("pickupLocation").value.trim();
-
-    if (!source || !destination || !pickup) {
-      tripMessage.style.color = "var(--danger)";
-      tripMessage.textContent = "Please complete all required locations.";
+    if (
+      !currentUser.emailVerified ||
+      currentProfile.status !== "active" ||
+      !["driver", "broker"].includes(currentProfile.role)
+    ) {
+      showMessage(
+        "Your account is not authorised to post trips.",
+        "error"
+      );
       return;
     }
 
-    if (source.toLowerCase() === destination.toLowerCase()) {
-      tripMessage.style.color = "var(--danger)";
-      tripMessage.textContent =
-        "Source and destination cannot be identical.";
+    if (!form.reportValidity()) return;
+
+    const travelDate = document.getElementById("travelDate").value;
+    const travelTime = document.getElementById("travelTime").value;
+
+    if (travelDate < localToday()) {
+      showMessage(
+        "Please select today or a future travel date.",
+        "error"
+      );
       return;
     }
 
-    tripMessage.style.color = "var(--secondary)";
-    tripMessage.textContent =
-      "Your form is valid. Firebase trip submission will be connected in the next development stage.";
-  });
+    const fare = Number(document.getElementById("fare").value);
+    const seats = Number(document.getElementById("seats").value);
 
-  tripForm.addEventListener("reset", () => {
-    tripMessage.textContent = "";
+    if (!Number.isSafeInteger(fare) || fare <= 0) {
+      showMessage(
+        "Enter a valid fare greater than zero.",
+        "error"
+      );
+      return;
+    }
+
+    if (!Number.isInteger(seats) || seats < 1 || seats > 50) {
+      showMessage(
+        "Enter a valid passenger seat number.",
+        "error"
+      );
+      return;
+    }
+
+    if (!document.getElementById("confirmAccuracy").checked) {
+      showMessage(
+        "Please confirm that the trip information is accurate.",
+        "error"
+      );
+      return;
+    }
+
+    const trip = {
+      pickupLocation: document.getElementById("pickupLocation").value.trim(),
+      source: document.getElementById("source").value.trim(),
+      destination: document.getElementById("destination").value.trim(),
+      travelDate,
+      travelTime,
+      tripType: document.getElementById("tripType").value,
+      vehicleType: document.getElementById("vehicleType").value,
+      seats,
+      fare,
+      negotiable: document.getElementById("negotiable").value === "true",
+      description: document.getElementById("description").value.trim(),
+
+      posterUid: currentUser.uid,
+      posterName:
+        currentProfile.displayName ||
+        currentUser.displayName ||
+        "DarjeelingHost User",
+      posterRole: currentProfile.role,
+
+      status: "open",
+      moderationStatus: "pending",
+
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    try {
+      submitButton.disabled = true;
+      submitButton.textContent = "Submitting...";
+
+      await addDoc(collection(db, "trips"), trip);
+
+      showMessage(
+        "Your trip has been submitted successfully. It is awaiting platform review before appearing in the marketplace.",
+        "success"
+      );
+
+      form.reset();
+      document.getElementById("travelDate").min = localToday();
+
+    } catch (error) {
+      console.error("Trip submission failed:", error);
+
+      if (error.code === "permission-denied") {
+        showMessage(
+          "Firestore rejected this submission. The security rules may need to be updated to match the trip fields.",
+          "error"
+        );
+      } else {
+        showMessage(
+          error.message || "Unable to submit your trip. Please try again.",
+          "error"
+        );
+      }
+
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "Submit Trip";
+    }
   });
 </script>
 
