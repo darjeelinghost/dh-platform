@@ -12,15 +12,17 @@ import {
   createUserProfile
 } from "./firebase.js";
 
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
-
 // ============================================
-// PAGE HELPERS
+// DARJEELINGHOST AUTHENTICATION V1
 // ============================================
 
 const $ = (selector) => document.querySelector(selector);
+
+let googleProcessing = false;
+
+// ============================================
+// MESSAGE HELPERS
+// ============================================
 
 function showMessage(message, type = "info") {
   const element = $(
@@ -38,6 +40,7 @@ function showMessage(message, type = "info") {
 
   element.classList.remove("success", "error", "info");
   element.classList.add(type);
+
   element.setAttribute("role", "alert");
 }
 
@@ -82,7 +85,7 @@ function redirectByRole(role) {
 }
 
 // ============================================
-// ACCOUNT STATUS CHECK
+// ACCOUNT ACCESS CHECK
 // ============================================
 
 async function checkAccountAccess(user) {
@@ -96,6 +99,7 @@ async function checkAccountAccess(user) {
   const tokenResult = await user.getIdTokenResult(true);
   const claims = tokenResult.claims || {};
 
+  // Trusted custom claims take precedence.
   if (claims.superadmin === true) {
     return {
       allowed: true,
@@ -109,6 +113,8 @@ async function checkAccountAccess(user) {
       role: "admin"
     };
   }
+
+  await user.reload();
 
   if (!user.emailVerified) {
     return {
@@ -162,7 +168,7 @@ async function checkAccountAccess(user) {
 }
 
 // ============================================
-// HANDLE ACCOUNT ACCESS
+// PROCESS SIGNED-IN ACCOUNT
 // ============================================
 
 async function processSignedInUser(user) {
@@ -172,7 +178,7 @@ async function processSignedInUser(user) {
     switch (result.reason) {
       case "email-unverified":
         showMessage(
-          "Please verify your email before accessing DarjeelingHost. Use the resend verification option.",
+          "Please verify your email before accessing DarjeelingHost. You can request another verification email below.",
           "error"
         );
         break;
@@ -216,6 +222,7 @@ async function processSignedInUser(user) {
   }
 
   redirectByRole(result.role);
+
   return true;
 }
 
@@ -227,7 +234,6 @@ async function handleRegistration(event) {
   event.preventDefault();
 
   const button = $("#registerForm button[type='submit']");
-
   const originalText = button?.textContent;
 
   const fullName = getValue("#fullName");
@@ -235,9 +241,10 @@ async function handleRegistration(event) {
   const phone = getValue("#phone");
   const whatsapp = getValue("#whatsapp");
   const role = getValue("#accountType");
+
   const password = $("#registerPassword")?.value || "";
   const confirmPassword = $("#confirmPassword")?.value || "";
-  const termsAccepted = $("#terms")?.checked;
+  const termsAccepted = $("#terms")?.checked === true;
 
   if (!fullName || !email || !password) {
     showMessage(
@@ -249,7 +256,7 @@ async function handleRegistration(event) {
 
   if (!["driver", "broker"].includes(role)) {
     showMessage(
-      "Please select Driver or Broker.",
+      "Please select Driver or Travel Agent / Broker.",
       "error"
     );
     return;
@@ -271,9 +278,9 @@ async function handleRegistration(event) {
     return;
   }
 
-  if ($("#terms") && !termsAccepted) {
+  if (!termsAccepted) {
     showMessage(
-      "Please accept the terms and conditions.",
+      "Please accept the terms and conditions before registering.",
       "error"
     );
     return;
@@ -291,28 +298,42 @@ async function handleRegistration(event) {
       role
     });
 
-    await sendVerificationEmail(result.user);
+    try {
+      await sendVerificationEmail(result.user);
 
-    showMessage(
-      "Registration successful! A verification email has been sent. Verify your email, then return to log in. Your account will still require administrator approval.",
-      "success"
-    );
+      showMessage(
+        "Registration successful! A verification email has been sent. Verify your email, then sign in. Your account will still require administrator approval.",
+        "success"
+      );
 
-    const form = $("#registerForm");
+    } catch (verificationError) {
+      console.error(
+        "Verification email could not be sent:",
+        verificationError
+      );
 
-    if (form) {
-      form.reset();
+      showMessage(
+        "Your account was created, but the verification email could not be sent. Sign in and use Resend Verification Email.",
+        "info"
+      );
     }
+
+    $("#registerForm")?.reset();
 
   } catch (error) {
     console.error("Registration error:", error);
 
-    showMessage(
-      error.code === "auth/email-already-in-use"
-        ? "This email is already registered. Please log in instead."
-        : error.message || "Registration failed.",
-      "error"
-    );
+    let message = error.message || "Registration failed.";
+
+    if (error.code === "auth/email-already-in-use") {
+      message = "This email is already registered. Please sign in instead.";
+    }
+
+    if (error.code === "auth/invalid-email") {
+      message = "Please enter a valid email address.";
+    }
+
+    showMessage(message, "error");
 
   } finally {
     setButtonLoading(button, false, originalText);
@@ -334,7 +355,7 @@ async function handleLogin(event) {
 
   if (!email || !password) {
     showMessage(
-      "Enter your email and password.",
+      "Enter your email address and password.",
       "error"
     );
     return;
@@ -350,12 +371,17 @@ async function handleLogin(event) {
   } catch (error) {
     console.error("Login error:", error);
 
-    showMessage(
-      error.code === "auth/invalid-credential"
-        ? "Incorrect email or password."
-        : error.message || "Login failed.",
-      "error"
-    );
+    let message = error.message || "Login failed.";
+
+    if (
+      error.code === "auth/invalid-credential" ||
+      error.code === "auth/wrong-password" ||
+      error.code === "auth/user-not-found"
+    ) {
+      message = "Incorrect email or password.";
+    }
+
+    showMessage(message, "error");
 
   } finally {
     setButtonLoading(button, false, originalText);
@@ -363,14 +389,14 @@ async function handleLogin(event) {
 }
 
 // ============================================
-// RESEND EMAIL VERIFICATION
+// RESEND VERIFICATION EMAIL
 // ============================================
 
 async function handleResendVerification() {
   try {
     if (!auth.currentUser) {
       showMessage(
-        "Please log in first to resend verification.",
+        "Please sign in with your email and password first.",
         "error"
       );
       return;
@@ -380,9 +406,10 @@ async function handleResendVerification() {
 
     if (refreshed.emailVerified) {
       showMessage(
-        "Your email is already verified. You can continue to your account.",
+        "Your email is already verified. You can sign in to your account.",
         "success"
       );
+
       return;
     }
 
@@ -394,10 +421,10 @@ async function handleResendVerification() {
     );
 
   } catch (error) {
-    console.error("Verification email error:", error);
+    console.error("Verification error:", error);
 
     showMessage(
-      error.message || "Unable to resend verification email.",
+      error.message || "Unable to send verification email.",
       "error"
     );
   }
@@ -410,17 +437,46 @@ async function handleResendVerification() {
 async function handleGoogleSignIn(event) {
   event?.preventDefault();
 
+  if (googleProcessing) return;
+
   const button = event?.currentTarget ||
-    $("[data-google-login]") ||
-    $("#googleLogin");
+    $("#googleLogin") ||
+    $("#googleRegister");
 
   const originalText = button?.textContent;
 
+  const page = getCurrentPage();
+
   try {
+    // A Google registration must accept terms.
+    // Existing Google accounts do not need to accept again.
+    if (page === "register.html") {
+      const role = getValue("#accountType");
+
+      if (!["driver", "broker"].includes(role)) {
+        showMessage(
+          "Please select Driver or Travel Agent / Broker before continuing with Google.",
+          "error"
+        );
+        return;
+      }
+
+      if ($("#terms")?.checked !== true) {
+        showMessage(
+          "Please accept the terms and conditions before registering with Google.",
+          "error"
+        );
+        return;
+      }
+    }
+
+    googleProcessing = true;
+
     setButtonLoading(button, true);
 
     const result = await signInWithGoogle();
 
+    // The browser is navigating to Google's sign-in page.
     if (result.redirected) {
       return;
     }
@@ -430,37 +486,51 @@ async function handleGoogleSignIn(event) {
   } catch (error) {
     console.error("Google sign-in error:", error);
 
-    showMessage(
-      error.message || "Google sign-in failed.",
-      "error"
-    );
+    let message = error.message || "Google sign-in failed.";
+
+    if (error.code === "auth/popup-closed-by-user") {
+      message = "Google sign-in was cancelled.";
+    }
+
+    if (error.code === "auth/unauthorized-domain") {
+      message = "This website domain is not authorised for Google sign-in. Check Firebase Authorized Domains.";
+    }
+
+    if (error.code === "auth/account-exists-with-different-credential") {
+      message = "An account already exists with this email using another sign-in method. Sign in using that method first.";
+    }
+
+    showMessage(message, "error");
+
+  } finally {
+    googleProcessing = false;
 
     setButtonLoading(button, false, originalText);
   }
 }
 
+// ============================================
+// PROCESS GOOGLE USER
+// ============================================
+
 async function processGoogleUser(user) {
   if (!user) return;
+
+  await user.reload();
 
   const tokenResult = await user.getIdTokenResult(true);
   const claims = tokenResult.claims || {};
 
-  // Existing Admin/Super Admin account.
-  if (
-    claims.admin === true ||
-    claims.superadmin === true
-  ) {
-    redirectByRole(
-      claims.superadmin === true
-        ? "superadmin"
-        : "admin"
-    );
-
+  // Existing administrator accounts.
+  if (claims.superadmin === true) {
+    redirectByRole("superadmin");
     return;
   }
 
-  // Google normally supplies verified email accounts.
-  await user.reload();
+  if (claims.admin === true) {
+    redirectByRole("admin");
+    return;
+  }
 
   if (!user.emailVerified) {
     showMessage(
@@ -470,47 +540,76 @@ async function processGoogleUser(user) {
     return;
   }
 
+  const page = getCurrentPage();
+
   let profile = await getUserProfile(user.uid);
 
-  // New Google user: registration page must supply a role.
+  // ========================================
+  // NEW GOOGLE ACCOUNT
+  // ========================================
+
   if (!profile) {
-    if (getCurrentPage() !== "register.html") {
+    if (page !== "register.html") {
       showMessage(
-        "This is a new Google account. Please complete registration and select Driver or Broker.",
+        "Your Google account is recognised, but registration is incomplete. Open the registration page, select Driver or Broker, accept the terms and continue with Google.",
         "info"
       );
 
       const link = document.createElement("a");
+
       link.href = "register.html";
-      link.textContent = " Complete registration";
+      link.textContent = "Complete registration";
       link.style.display = "inline-block";
       link.style.marginTop = "10px";
 
       $("#authMessage")?.appendChild(link);
+
       return;
     }
 
     const role = getValue("#accountType");
+    const termsAccepted = $("#terms")?.checked === true;
 
     if (!["driver", "broker"].includes(role)) {
       showMessage(
-        "Select Driver or Broker before continuing with Google.",
+        "Select Driver or Broker before registering.",
         "error"
       );
       return;
     }
 
-    await createUserProfile(user, {
-      displayName:
-        user.displayName ||
-        getValue("#fullName") ||
-        "DarjeelingHost User",
-      phone: getValue("#phone"),
-      whatsapp: getValue("#whatsapp"),
-      role
-    });
+    if (!termsAccepted) {
+      showMessage(
+        "Accept the terms and conditions before completing Google registration.",
+        "error"
+      );
+      return;
+    }
 
+    // Recheck immediately before profile creation.
     profile = await getUserProfile(user.uid);
+
+    if (!profile) {
+      await createUserProfile(user, {
+        displayName:
+          user.displayName ||
+          getValue("#fullName") ||
+          "DarjeelingHost User",
+        phone: getValue("#phone"),
+        whatsapp: getValue("#whatsapp"),
+        role
+      });
+
+      profile = await getUserProfile(user.uid);
+    }
+
+    if (!profile) {
+      showMessage(
+        "Your Google account was created, but its profile could not be loaded. Please contact support.",
+        "error"
+      );
+      return;
+    }
 
     showMessage(
       "Google registration successful. Your account is awaiting administrator approval.",
@@ -519,6 +618,10 @@ async function processGoogleUser(user) {
 
     return;
   }
+
+  // ========================================
+  // EXISTING GOOGLE ACCOUNT
+  // ========================================
 
   await processSignedInUser(user);
 }
@@ -558,10 +661,10 @@ function setupPasswordToggle() {
 
         if (!input) return;
 
-        input.type =
-          input.type === "password"
-            ? "text"
-            : "password";
+        const visible = input.type === "password";
+
+        input.type = visible ? "text" : "password";
+        button.textContent = visible ? "Hide" : "Show";
       });
     });
 }
@@ -581,51 +684,39 @@ function initialiseAuthForms() {
     handleLogin
   );
 
-  document.querySelectorAll(
-    "#googleLogin, #googleRegister, [data-google-login]"
-  ).forEach((button) => {
-    button.addEventListener(
-      "click",
-      handleGoogleSignIn
-    );
-  });
+  $("#googleLogin")?.addEventListener(
+    "click",
+    handleGoogleSignIn
+  );
 
-  document.querySelectorAll(
-    "#resendVerification, [data-resend-verification]"
-  ).forEach((button) => {
-    button.addEventListener(
-      "click",
-      handleResendVerification
-    );
-  });
+  $("#googleRegister")?.addEventListener(
+    "click",
+    handleGoogleSignIn
+  );
+
+  document.querySelectorAll("[data-google-login]")
+    .forEach((button) => {
+      button.addEventListener(
+        "click",
+        handleGoogleSignIn
+      );
+    });
+
+  $("#resendVerification")?.addEventListener(
+    "click",
+    handleResendVerification
+  );
+
+  document.querySelectorAll("[data-resend-verification]")
+    .forEach((button) => {
+      button.addEventListener(
+        "click",
+        handleResendVerification
+      );
+    });
 
   setupPasswordToggle();
 }
-
-// ============================================
-// AUTHENTICATION STATE
-// ============================================
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-
-  const page = getCurrentPage();
-
-  // Only automatically process existing users
-  // on the public authentication pages.
-  if (
-    page === "login.html" ||
-    page === "register.html"
-  ) {
-    // Allow registration page to finish a new Google profile.
-    const profile = await getUserProfile(user.uid)
-      .catch(() => null);
-
-    if (profile) {
-      await processSignedInUser(user);
-    }
-  }
-});
 
 // ============================================
 // LOGOUT
@@ -634,11 +725,16 @@ onAuthStateChanged(auth, async (user) => {
 async function handleLogout() {
   try {
     await logoutUser();
+
     window.location.replace("login.html");
 
   } catch (error) {
     console.error("Logout error:", error);
-    showMessage("Unable to log out.", "error");
+
+    showMessage(
+      "Unable to log out. Please try again.",
+      "error"
+    );
   }
 }
 
@@ -661,7 +757,7 @@ window.DarjAuth = {
 };
 
 // ============================================
-// START
+// START AUTHENTICATION
 // ============================================
 
 initialiseAuthForms();
