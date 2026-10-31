@@ -4,647 +4,332 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#102b46">
-  <meta name="description" content="DarjeelingHost driver profile and vehicle information.">
-
+  <meta name="theme-color" content="#172b3a">
   <title>Driver Profile | DarjeelingHost</title>
-
   <link rel="stylesheet" href="css/style.css">
 
   <style>
-    .profile-page {
-      max-width: 1000px;
-      margin: 35px auto;
-      width: 92%;
+    :root {
+      --navy: #172b3a;
+      --blue: #245b78;
+      --light: #f3f6f8;
+      --border: #dce3e8;
+      --muted: #687783;
     }
 
-    .profile-top {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 25px;
-      display: flex;
-      align-items: center;
-      gap: 22px;
-      flex-wrap: wrap;
-      box-shadow: var(--shadow);
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--light);
+      color: #24323d;
+      font-family: Arial, sans-serif;
     }
 
-    .profile-avatar {
-      width: 105px;
-      height: 105px;
-      border-radius: 50%;
-      background: #eaf3fc;
-      display: grid;
-      place-items: center;
-      font-size: 42px;
-      color: var(--primary);
-      overflow: hidden;
-    }
-
-    .profile-avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .profile-info {
-      flex: 1;
-      min-width: 180px;
-    }
-
-    .profile-info h1 {
-      color: var(--primary);
-      margin: 0 0 5px;
-      font-size: 25px;
-    }
-
-    .profile-info p {
-      color: var(--muted);
-      margin: 5px 0;
-    }
-
-    .profile-section {
-      margin-top: 25px;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 25px;
-      box-shadow: var(--shadow);
-    }
-
-    .profile-section h2 {
-      color: var(--primary);
-      font-size: 20px;
-      margin-top: 0;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 13px;
-    }
-
-    .details-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-
-    .detail-item label {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 5px;
-    }
-
-    .detail-item strong {
-      color: var(--text);
-      font-size: 15px;
-      overflow-wrap: anywhere;
-    }
-
-    .vehicle-header {
+    .topbar {
+      background: var(--navy);
+      color: white;
+      padding: 15px 5%;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 15px;
       flex-wrap: wrap;
-      gap: 10px;
     }
 
-    .vehicle-note {
-      padding: 13px;
-      background: #edf5fc;
-      border-radius: 8px;
-      color: #245b91;
-      font-size: 13px;
-      margin-bottom: 20px;
-    }
+    .brand { font-size: 20px; font-weight: 700; }
 
-    .document-row {
+    .nav {
       display: flex;
-      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 10px;
-      padding: 13px 0;
-      border-bottom: 1px solid var(--border);
+    }
+
+    .nav a, .nav button {
+      color: white;
+      text-decoration: none;
+      background: none;
+      border: 0;
+      cursor: pointer;
       font-size: 14px;
     }
 
-    .profile-actions {
+    .container {
+      width: min(950px, 92%);
+      margin: 28px auto;
+    }
+
+    .heading { margin-bottom: 20px; }
+    .heading h1 { margin: 0 0 7px; }
+    .muted { color: var(--muted); font-size: 14px; }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .profile-header {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 20px;
+      align-items: center;
+      gap: 16px;
     }
 
-    .profile-form {
-      display: none;
-    }
-
-    .profile-form.active {
-      display: block;
-    }
-
-    .form-grid {
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #e1edf3;
+      color: var(--blue);
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      place-items: center;
+      font-size: 25px;
+      font-weight: bold;
+    }
+
+    .profile-header h2 { margin: 0 0 5px; }
+
+    .status {
+      display: inline-block;
+      background: #fff3d8;
+      color: #805b13;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .section-title {
+      margin: 0 0 17px;
+      font-size: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 15px;
     }
 
-    .full-width {
-      grid-column: 1 / -1;
+    .field { display: flex; flex-direction: column; gap: 7px; }
+    .field.full { grid-column: 1 / -1; }
+
+    label { font-size: 13px; font-weight: 600; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      color: #24323d;
+      font: inherit;
+      font-size: 14px;
     }
 
-    .form-note {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 5px;
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #9bc6dc;
+      border-color: var(--blue);
     }
 
-    @media(max-width: 650px) {
-      .details-grid,
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
+    input[readonly] { background: #f2f4f5; }
 
-      .full-width {
-        grid-column: auto;
-      }
+    textarea { min-height: 100px; resize: vertical; }
 
-      .profile-section {
-        padding: 18px;
-      }
+    .note {
+      background: #f0f6fa;
+      border-left: 4px solid var(--blue);
+      padding: 13px;
+      border-radius: 6px;
+      color: #405563;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 15px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-secondary { background: #e8edf0; color: #263946; }
+
+    .message {
+      display: none;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
+    .message.show { display: block; }
+    .message.error { background: #fdeaea; color: #8b2525; }
+    .message.success { background: #e8f5ec; color: #24613a; }
+
+    @media (max-width: 650px) {
+      .grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .card { padding: 17px; }
     }
   </style>
 </head>
 
 <body>
-
-<header>
-  <div class="container navbar">
-
-    <a href="index.html" class="brand">
-      Darjeeling<span>Host</span>
-    </a>
-
-    <button class="menu-toggle" id="menuToggle"
-      aria-label="Toggle navigation" aria-expanded="false">
-      ☰
-    </button>
-
-    <nav class="nav-links" id="navLinks">
-      <a href="index.html">Home</a>
+  <header class="topbar">
+    <div class="brand">DarjeelingHost</div>
+    <nav class="nav">
       <a href="dashboard.html">Dashboard</a>
       <a href="notifications.html">Notifications</a>
       <a href="trip-history.html">Trip History</a>
+      <button type="button" id="logoutBtn">Logout</button>
     </nav>
+  </header>
 
-  </div>
-</header>
-
-<main class="profile-page">
-
-  <div class="dashboard-header">
-    <div>
-      <h1 style="color:var(--primary);">My Driver Profile</h1>
-      <p style="color:var(--muted);">
-        Your professional identity on DarjeelingHost.
-      </p>
+  <main class="container">
+    <div class="heading">
+      <h1>Driver Profile</h1>
+      <p class="muted">Manage your personal details and registered vehicle.</p>
     </div>
 
-    <a href="dashboard.html" class="btn btn-outline">
-      Back to Dashboard
-    </a>
-  </div>
+    <div id="profileMessage" class="message" role="status" aria-live="polite"></div>
 
-  <!-- PROFILE SUMMARY -->
-
-  <section class="profile-top">
-
-    <div class="profile-avatar" id="profileAvatar">
-      👤
-    </div>
-
-    <div class="profile-info">
-      <h1 id="displayName">Driver Name</h1>
-      <p id="displayLocation">Operating area not added</p>
-      <p>
-        <span class="status status-pending" id="profileStatus">
-          Pending Verification
-        </span>
-      </p>
-      <p style="font-size:12px;">
-        DarjeelingHost Driver
-      </p>
-    </div>
-
-    <button class="btn btn-primary" id="editProfileBtn">
-      Edit Profile
-    </button>
-
-  </section>
-
-  <!-- PROFILE DETAILS -->
-
-  <section class="profile-section" id="profileDetails">
-
-    <h2>Personal Information</h2>
-
-    <div class="details-grid">
-
-      <div class="detail-item">
-        <label>Full Name</label>
-        <strong id="detailName">Not provided</strong>
+    <section class="card">
+      <div class="profile-header">
+        <div class="avatar" id="profileAvatar">D</div>
+        <div>
+          <h2 id="profileName">Loading profile...</h2>
+          <p class="muted" id="profileArea">Darjeeling and surrounding areas</p>
+          <span class="status" id="verificationStatus">Checking status</span>
+        </div>
       </div>
-
-      <div class="detail-item">
-        <label>Phone Number</label>
-        <strong id="detailPhone">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>WhatsApp Number</label>
-        <strong id="detailWhatsapp">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Email Address</label>
-        <strong id="detailEmail">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Home Address</label>
-        <strong id="detailAddress">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Operating Area</label>
-        <strong id="detailArea">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Driving Experience</label>
-        <strong id="detailExperience">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Languages</label>
-        <strong id="detailLanguages">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Driving Licence Number</label>
-        <strong id="detailLicence">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Licence Expiry Date</label>
-        <strong id="detailLicenceExpiry">Not provided</strong>
-      </div>
-
-    </div>
-
-    <div class="detail-item" style="margin-top:20px;">
-      <label>About the Driver</label>
-      <strong id="detailAbout">No introduction added.</strong>
-    </div>
-
-  </section>
-
-  <!-- VEHICLE INFORMATION -->
-
-  <section class="profile-section">
-
-    <div class="vehicle-header">
-      <h2>Registered Vehicle</h2>
-      <span class="status status-pending" id="vehicleStatus">
-        Pending Verification
-      </span>
-    </div>
-
-    <div class="vehicle-note">
-      V1 policy: Each driver account is permitted to register
-      exactly one vehicle. A second vehicle cannot be added.
-    </div>
-
-    <div class="details-grid">
-
-      <div class="detail-item">
-        <label>Vehicle Type</label>
-        <strong id="detailVehicleType">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Vehicle Make and Model</label>
-        <strong id="detailVehicleModel">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Registration Number</label>
-        <strong id="detailRegistration">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Passenger Capacity</label>
-        <strong id="detailSeats">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Vehicle Colour</label>
-        <strong id="detailColour">Not provided</strong>
-      </div>
-
-      <div class="detail-item">
-        <label>Vehicle Insurance Expiry</label>
-        <strong id="detailInsuranceExpiry">Not provided</strong>
-      </div>
-
-    </div>
-
-    <h3 style="color:var(--primary);margin-top:25px;">
-      Vehicle Documents
-    </h3>
-
-    <div class="document-row">
-      <span>Registration Certificate</span>
-      <span class="status status-pending">Not Submitted</span>
-    </div>
-
-    <div class="document-row">
-      <span>Insurance Document</span>
-      <span class="status status-pending">Not Submitted</span>
-    </div>
-
-    <div class="document-row">
-      <span>Fitness Certificate (if applicable)</span>
-      <span class="status status-pending">Not Submitted</span>
-    </div>
-
-    <div class="document-row">
-      <span>Driving Licence</span>
-      <span class="status status-pending">Not Submitted</span>
-    </div>
-
-  </section>
-
-  <!-- EDIT PROFILE FORM -->
-
-  <section class="profile-section profile-form" id="editProfileForm">
-
-    <h2>Edit Driver Profile</h2>
+    </section>
 
     <form id="driverForm">
+      <section class="card">
+        <h2 class="section-title">Personal Information</h2>
 
-      <div class="form-grid">
+        <div class="grid">
+          <div class="field">
+            <label for="fullName">Full Name</label>
+            <input id="fullName" name="fullName" type="text" maxlength="100" required>
+          </div>
 
-        <div class="form-group">
-          <label for="fullName">Full Name *</label>
-          <input type="text" id="fullName" maxlength="100" required>
+          <div class="field">
+            <label for="email">Email Address</label>
+            <input id="email" name="email" type="email" readonly>
+          </div>
+
+          <div class="field">
+            <label for="phone">Phone Number</label>
+            <input id="phone" name="phone" type="tel" maxlength="20" required>
+          </div>
+
+          <div class="field">
+            <label for="whatsapp">WhatsApp Number</label>
+            <input id="whatsapp" name="whatsapp" type="tel" maxlength="20">
+          </div>
+
+          <div class="field full">
+            <label for="address">Residential Address</label>
+            <input id="address" name="address" type="text" maxlength="250">
+          </div>
+
+          <div class="field">
+            <label for="area">Operating Area</label>
+            <input id="area" name="area" type="text" maxlength="150"
+              placeholder="e.g. Darjeeling, Tukvar, Kurseong">
+          </div>
+
+          <div class="field">
+            <label for="experience">Driving Experience (years)</label>
+            <input id="experience" name="experience" type="number"
+              min="0" max="60" step="1">
+          </div>
+
+          <div class="field full">
+            <label for="about">Introduction</label>
+            <textarea id="about" name="about" maxlength="1000"
+              placeholder="Introduce yourself and describe your driving services."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">Registered Vehicle</h2>
+        <p class="muted">Only one vehicle can be registered to a driver account in V1.</p>
+
+        <div class="grid">
+          <div class="field">
+            <label for="vehicleType">Vehicle Type</label>
+            <select id="vehicleType" name="vehicleType" required>
+              <option value="">Select vehicle type</option>
+              <option>Hatchback</option>
+              <option>Sedan</option>
+              <option>Luxury Vehicle</option>
+              <option>Innova</option>
+              <option>Innova Crysta</option>
+              <option>Sumo</option>
+              <option>Omni</option>
+              <option>Van</option>
+              <option>Traveller</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="vehicleModel">Vehicle Model</label>
+            <input id="vehicleModel" name="vehicleModel" type="text"
+              maxlength="100" required>
+          </div>
+
+          <div class="field">
+            <label for="registration">Registration Number</label>
+            <input id="registration" name="registration" type="text"
+              maxlength="30" placeholder="Vehicle registration">
+          </div>
+
+          <div class="field">
+            <label for="seats">Passenger Seats</label>
+            <input id="seats" name="seats" type="number" min="1" max="50">
+          </div>
+
+          <div class="field">
+            <label for="colour">Vehicle Colour</label>
+            <input id="colour" name="colour" type="text" maxlength="40">
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="phone">Phone Number *</label>
-          <input type="tel" id="phone" maxlength="20" required>
+        <div class="note">
+          Driving licence details, insurance documents and vehicle verification
+          records will be handled through a separate restricted verification
+          process. Do not enter sensitive document numbers here.
         </div>
+      </section>
 
-        <div class="form-group">
-          <label for="whatsapp">WhatsApp Number</label>
-          <input type="tel" id="whatsapp" maxlength="20">
-        </div>
-
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" disabled>
-        </div>
-
-        <div class="form-group">
-          <label for="address">Home Address</label>
-          <input type="text" id="address" maxlength="200">
-        </div>
-
-        <div class="form-group">
-          <label for="area">Operating Area</label>
-          <input type="text" id="area" maxlength="100"
-            placeholder="e.g. Darjeeling, Siliguri">
-        </div>
-
-        <div class="form-group">
-          <label for="experience">Driving Experience</label>
-          <select id="experience">
-            <option value="">Select experience</option>
-            <option value="Less than 1 year">Less than 1 year</option>
-            <option value="1–3 years">1–3 years</option>
-            <option value="4–6 years">4–6 years</option>
-            <option value="7–10 years">7–10 years</option>
-            <option value="More than 10 years">More than 10 years</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="languages">Languages Spoken</label>
-          <input type="text" id="languages"
-            placeholder="Nepali, English, Hindi">
-        </div>
-
-        <div class="form-group">
-          <label for="licence">Driving Licence Number</label>
-          <input type="text" id="licence" maxlength="40">
-        </div>
-
-        <div class="form-group">
-          <label for="licenceExpiry">Licence Expiry Date</label>
-          <input type="date" id="licenceExpiry">
-        </div>
-
-        <div class="form-group full-width">
-          <label for="about">About the Driver</label>
-          <textarea id="about" maxlength="1000"
-            placeholder="Introduce yourself and your driving services."></textarea>
-        </div>
-
-      </div>
-
-      <h2 style="margin-top:30px;">Vehicle Information</h2>
-
-      <div class="vehicle-note">
-        Only one vehicle is allowed per driver account.
-        Contact the administrator if your registered vehicle needs
-        to be replaced.
-      </div>
-
-      <div class="form-grid">
-
-        <div class="form-group">
-          <label for="vehicleType">Vehicle Type *</label>
-          <select id="vehicleType" required>
-            <option value="">Select vehicle type</option>
-            <option>Hatchback</option>
-            <option>Sedan</option>
-            <option>Luxury Vehicle</option>
-            <option>Innova</option>
-            <option>Innova Crysta</option>
-            <option>Sumo</option>
-            <option>Omni</option>
-            <option>Van</option>
-            <option>Traveller</option>
-            <option>Other</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="vehicleModel">Make and Model *</label>
-          <input type="text" id="vehicleModel"
-            placeholder="e.g. Maruti Wagon R" required>
-        </div>
-
-        <div class="form-group">
-          <label for="registration">Registration Number *</label>
-          <input type="text" id="registration"
-            placeholder="Vehicle registration number"
-            maxlength="20" required>
-        </div>
-
-        <div class="form-group">
-          <label for="seats">Passenger Capacity *</label>
-          <input type="number" id="seats" min="1" max="50" required>
-        </div>
-
-        <div class="form-group">
-          <label for="colour">Vehicle Colour</label>
-          <input type="text" id="colour">
-        </div>
-
-        <div class="form-group">
-          <label for="insuranceExpiry">Insurance Expiry Date</label>
-          <input type="date" id="insuranceExpiry">
-        </div>
-
-      </div>
-
-      <p class="form-note">
-        Document uploads and secure profile saving will be connected
-        through Firebase in a later development step.
-      </p>
-
-      <p id="formMessage" role="status" aria-live="polite"></p>
-
-      <div class="profile-actions">
-        <button type="submit" class="btn btn-primary">
+      <div class="actions">
+        <button class="btn btn-primary" id="saveProfileBtn" type="submit">
           Save Profile
         </button>
-
-        <button type="button" class="btn btn-outline" id="cancelEdit">
-          Cancel
-        </button>
+        <a class="btn btn-secondary" href="dashboard.html"
+          style="text-decoration:none;">Back to Dashboard</a>
       </div>
-
     </form>
+  </main>
 
-  </section>
-
-</main>
-
-<footer>
-  <div class="container footer-content">
-    <strong>DarjeelingHost</strong>
-    <p>© <span id="year"></span> DarjeelingHost</p>
-  </div>
-</footer>
-
-<script>
-  document.getElementById("year").textContent =
-    new Date().getFullYear();
-
-  const menuToggle = document.getElementById("menuToggle");
-  const navLinks = document.getElementById("navLinks");
-
-  menuToggle.addEventListener("click", () => {
-    const isOpen = navLinks.classList.toggle("open");
-    menuToggle.setAttribute("aria-expanded", String(isOpen));
-  });
-
-  navLinks.querySelectorAll("a").forEach(link => {
-    link.addEventListener("click", () => {
-      navLinks.classList.remove("open");
-      menuToggle.setAttribute("aria-expanded", "false");
-    });
-  });
-
-  const editButton = document.getElementById("editProfileBtn");
-  const editForm = document.getElementById("editProfileForm");
-  const details = document.getElementById("profileDetails");
-  const form = document.getElementById("driverForm");
-
-  const fields = {
-    fullName: "detailName",
-    phone: "detailPhone",
-    whatsapp: "detailWhatsapp",
-    email: "detailEmail",
-    address: "detailAddress",
-    area: "detailArea",
-    experience: "detailExperience",
-    languages: "detailLanguages",
-    licence: "detailLicence",
-    licenceExpiry: "detailLicenceExpiry",
-    about: "detailAbout",
-    vehicleType: "detailVehicleType",
-    vehicleModel: "detailVehicleModel",
-    registration: "detailRegistration",
-    seats: "detailSeats",
-    colour: "detailColour",
-    insuranceExpiry: "detailInsuranceExpiry"
-  };
-
-  editButton.addEventListener("click", () => {
-    editForm.classList.add("active");
-    editButton.style.display = "none";
-
-    Object.entries(fields).forEach(([inputId, displayId]) => {
-      const input = document.getElementById(inputId);
-      const display = document.getElementById(displayId);
-
-      input.value = display.textContent === "Not provided" ||
-        display.textContent === "No introduction added."
-        ? ""
-        : display.textContent;
-    });
-
-    editForm.scrollIntoView({ behavior: "smooth" });
-  });
-
-  document.getElementById("cancelEdit").addEventListener("click", () => {
-    editForm.classList.remove("active");
-    editButton.style.display = "inline-flex";
-  });
-
-  form.addEventListener("submit", event => {
-    event.preventDefault();
-
-    Object.entries(fields).forEach(([inputId, displayId]) => {
-      const value = document.getElementById(inputId).value.trim();
-
-      document.getElementById(displayId).textContent =
-        value || "Not provided";
-    });
-
-    const name = document.getElementById("fullName").value.trim();
-    const area = document.getElementById("area").value.trim();
-
-    document.getElementById("displayName").textContent =
-      name || "Driver Name";
-
-    document.getElementById("displayLocation").textContent =
-      area || "Operating area not added";
-
-    document.getElementById("formMessage").style.color =
-      "var(--success)";
-
-    document.getElementById("formMessage").textContent =
-      "Profile preview updated. Connect Firebase to save your changes permanently.";
-
-    editForm.classList.remove("active");
-    editButton.style.display = "inline-flex";
-
-    details.scrollIntoView({ behavior: "smooth" });
-  });
-</script>
-
+  <script type="module" src="js/driver-profile.js"></script>
 </body>
 </html>
