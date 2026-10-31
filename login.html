@@ -4,92 +4,286 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#102b46">
+
   <title>Login | DarjeelingHost</title>
+
+  <meta name="description"
+    content="Login to your DarjeelingHost driver and travel agent account.">
+
   <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .login-wrapper {
+      max-width: 440px;
+      margin: 55px auto;
+      padding: 0 18px;
+    }
+
+    .login-card {
+      background: #fff;
+      padding: 32px;
+      border-radius: 14px;
+      border: 1px solid #e0e6eb;
+      box-shadow: 0 8px 30px rgba(0,0,0,.06);
+    }
+
+    .login-heading {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .login-heading h1 {
+      color: #173f5f;
+      margin-bottom: 8px;
+    }
+
+    .login-heading p {
+      color: #657585;
+      font-size: 14px;
+    }
+
+    .login-form {
+      display: grid;
+      gap: 17px;
+    }
+
+    .login-form label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 7px;
+    }
+
+    .login-form input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #d7dee5;
+      border-radius: 7px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+
+    .login-form input:focus {
+      outline: 2px solid #b6d4e8;
+      border-color: #173f5f;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper input {
+      padding-right: 75px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      color: #173f5f;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .login-submit {
+      width: 100%;
+      padding: 14px;
+      background: #173f5f;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .login-submit:hover {
+      background: #24577d;
+    }
+
+    .login-submit:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 14px;
+      color: #657585;
+    }
+
+    .login-footer a {
+      color: #173f5f;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .login-footer a:hover {
+      text-decoration: underline;
+    }
+
+    .login-message {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .security-note {
+      margin-top: 20px;
+      padding: 12px;
+      background: #f4f7f9;
+      border-radius: 7px;
+      font-size: 12px;
+      color: #657585;
+      text-align: center;
+    }
+
+    @media(max-width:480px) {
+      .login-wrapper {
+        margin: 30px auto;
+      }
+
+      .login-card {
+        padding: 23px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<header>
-  <div class="container navbar">
-    <a href="index.html" class="brand">Darjeeling<span>Host</span></a>
-    <a href="index.html" class="btn btn-outline">Back to Home</a>
+<header class="site-header">
+  <div class="container">
+
+    <a href="index.html" class="logo">
+      DarjeelingHost
+    </a>
+
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="index.html#about">About</a>
+      <a href="index.html#how-it-works">How It Works</a>
+      <a href="register.html">Register</a>
+    </nav>
+
   </div>
 </header>
 
-<main class="container">
-  <div class="form-container">
 
-    <h2 style="color:var(--primary);text-align:center;">
-      Welcome Back
-    </h2>
+<main class="login-wrapper">
 
-    <p style="color:var(--muted);text-align:center;">
-      Login to your DarjeelingHost account.
-    </p>
+  <div class="login-card">
 
-    <form id="loginForm">
+    <div class="login-heading">
+      <h1>Welcome Back</h1>
+      <p>Login to your DarjeelingHost account.</p>
+    </div>
 
-      <div class="form-group">
-        <label for="email">Email Address</label>
+    <div
+      id="authMessage"
+      class="login-message"
+      role="status"
+      aria-live="polite"
+      hidden>
+    </div>
+
+    <form id="loginForm" class="login-form">
+
+      <div>
+        <label for="loginEmail">Email Address</label>
+
         <input
           type="email"
-          id="email"
+          id="loginEmail"
           name="email"
-          placeholder="Enter your email"
-          autocomplete="email"
-          required
-        >
+          placeholder="Enter your email address"
+          autocomplete="username"
+          required>
       </div>
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          placeholder="Enter your password"
-          autocomplete="current-password"
-          required
-        >
+      <div>
+        <label for="loginPassword">Password</label>
+
+        <div class="password-wrapper">
+
+          <input
+            type="password"
+            id="loginPassword"
+            name="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required>
+
+          <button
+            type="button"
+            class="toggle-password"
+            id="togglePassword">
+            SHOW
+          </button>
+
+        </div>
       </div>
 
-      <p id="loginMessage" role="status" aria-live="polite"></p>
-
-      <button type="submit" class="btn btn-primary" style="width:100%;">
+      <button
+        type="submit"
+        class="login-submit">
         Login
       </button>
 
     </form>
 
-    <p style="text-align:center;margin-top:22px;font-size:14px;">
+    <div class="login-footer">
       Don't have an account?
-      <a href="register.html" style="color:var(--secondary);font-weight:bold;">
-        Register here
-      </a>
-    </p>
+      <a href="register.html">Create Account</a>
+    </div>
+
+    <div class="security-note">
+      Your account must be approved by the platform
+      administrator before you can access the dashboard.
+    </div>
 
   </div>
+
 </main>
 
-<footer>
-  <div class="container footer-content">
-    <strong>DarjeelingHost</strong>
-    <p>© <span id="year"></span> DarjeelingHost</p>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>
+      © <span data-current-year></span>
+      DarjeelingHost. All rights reserved.
+    </p>
   </div>
 </footer>
 
+
 <script>
-  document.getElementById("year").textContent =
-    new Date().getFullYear();
+  const passwordInput =
+    document.getElementById("loginPassword");
 
-  document.getElementById("loginForm").addEventListener("submit", function(event) {
-    event.preventDefault();
+  const togglePassword =
+    document.getElementById("togglePassword");
 
-    document.getElementById("loginMessage").textContent =
-      "Login functionality will be connected to Firebase in the next development step.";
+  togglePassword.addEventListener("click", () => {
+
+    const isPassword =
+      passwordInput.type === "password";
+
+    passwordInput.type =
+      isPassword ? "text" : "password";
+
+    togglePassword.textContent =
+      isPassword ? "HIDE" : "SHOW";
+
   });
 </script>
+
+<script type="module" src="js/auth.js"></script>
+<script src="js/main.js"></script>
 
 </body>
 </html>
