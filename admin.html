@@ -3,62 +3,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10243a">
-
   <title>Admin Dashboard | DarjeelingHost</title>
 
-  <link rel="stylesheet" href="css/style.css">
-
   <style>
-    :root {
-      --admin-bg: #f3f6fa;
-      --admin-dark: #10243a;
-      --admin-blue: #1769aa;
-      --admin-text: #263445;
-      --admin-muted: #718096;
-      --admin-border: #e3e9f0;
-      --admin-white: #ffffff;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      background: var(--admin-bg);
-      color: var(--admin-text);
+      background: #f3f6fa;
+      color: #263445;
       font-family: Arial, sans-serif;
     }
 
-    .admin-layout {
-      min-height: 100vh;
-    }
-
-    .admin-header {
-      background: var(--admin-dark);
+    .header {
+      background: #10243a;
       color: white;
-      padding: 17px 24px;
+      padding: 16px 5%;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 15px;
+      justify-content: space-between;
       flex-wrap: wrap;
+      gap: 15px;
     }
 
-    .brand h1 {
-      font-size: 21px;
-      margin: 0;
-    }
+    .brand { font-size: 21px; font-weight: bold; }
 
-    .brand p {
-      margin: 5px 0 0;
-      font-size: 12px;
-      color: #c5d4e5;
-    }
-
-    .admin-account {
+    .header-right {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -66,7 +38,7 @@
       font-size: 13px;
     }
 
-    .role-label {
+    .role {
       background: #244b70;
       padding: 7px 11px;
       border-radius: 20px;
@@ -74,108 +46,88 @@
       font-weight: bold;
     }
 
-    .logout-button {
-      background: #ffffff;
-      color: #10243a;
-      border: none;
-      padding: 9px 15px;
-      border-radius: 7px;
+    button, input, select, textarea { font: inherit; }
+
+    button {
       cursor: pointer;
+    }
+
+    .logout {
+      background: white;
+      color: #10243a;
+      border: 0;
+      border-radius: 7px;
+      padding: 9px 15px;
       font-weight: bold;
     }
 
-    .admin-container {
+    .container {
       max-width: 1450px;
       margin: auto;
       padding: 25px;
     }
 
-    .welcome {
-      margin-bottom: 24px;
-    }
-
-    .welcome h2 {
-      margin: 0 0 7px;
-      font-size: 25px;
-    }
-
-    .welcome p {
-      margin: 0;
-      color: var(--admin-muted);
-      font-size: 14px;
-    }
+    .welcome { margin-bottom: 22px; }
+    .welcome h1 { margin: 0 0 7px; font-size: 25px; }
+    .muted { color: #718096; font-size: 13px; line-height: 1.6; }
 
     .message {
       display: none;
-      padding: 12px 15px;
+      padding: 13px 15px;
       border-radius: 8px;
       margin-bottom: 18px;
       font-size: 14px;
     }
 
-    .message.success {
-      display: block;
-      background: #e8f7ee;
-      color: #176b39;
-    }
+    .message:not([hidden]) { display: block; }
+    .message.success { background: #e8f7ee; color: #176b39; }
+    .message.error { background: #fff0f0; color: #a32c2c; }
+    .message.info { background: #eaf3ff; color: #245b91; }
 
-    .message.error {
-      display: block;
-      background: #fff0f0;
-      color: #a32c2c;
-    }
-
-    .message.info {
-      display: block;
-      background: #eaf3ff;
-      color: #245b91;
-    }
-
-    .stats-grid {
+    .stats {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 25px;
+      gap: 14px;
+      margin-bottom: 23px;
     }
 
-    .stat-card {
-      background: var(--admin-white);
-      border: 1px solid var(--admin-border);
-      border-radius: 12px;
-      padding: 20px;
-      min-height: 115px;
+    .stat {
+      background: white;
+      border: 1px solid #e3e9f0;
+      border-radius: 11px;
+      padding: 18px;
     }
 
-    .stat-card p {
-      color: var(--admin-muted);
-      margin: 0 0 12px;
+    .stat p {
+      margin: 0 0 10px;
+      color: #718096;
       font-size: 13px;
     }
 
-    .stat-card h3 {
-      margin: 0;
-      font-size: 29px;
-      color: var(--admin-dark);
+    .stat strong {
+      font-size: 27px;
+      color: #10243a;
     }
 
-    .admin-workspace {
+    .workspace {
       display: grid;
-      grid-template-columns: 235px minmax(0, 1fr);
-      gap: 20px;
+      grid-template-columns: 225px minmax(0, 1fr);
+      gap: 18px;
       align-items: start;
     }
 
-    .admin-sidebar {
-      background: var(--admin-white);
-      border: 1px solid var(--admin-border);
-      border-radius: 12px;
-      padding: 12px;
+    .sidebar, .content {
+      background: white;
+      border: 1px solid #e3e9f0;
+      border-radius: 11px;
     }
 
-    .sidebar-title {
+    .sidebar { padding: 12px; }
+
+    .sidebar-label {
       padding: 10px;
+      color: #718096;
       font-size: 11px;
-      color: var(--admin-muted);
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -184,639 +136,615 @@
     .nav-button {
       display: block;
       width: 100%;
-      border: none;
-      background: transparent;
-      color: var(--admin-text);
+      text-align: left;
+      border: 0;
+      border-radius: 7px;
       padding: 12px;
       margin-bottom: 4px;
-      text-align: left;
-      border-radius: 7px;
-      cursor: pointer;
+      background: transparent;
+      color: #263445;
       font-size: 13px;
     }
 
-    .nav-button:hover,
-    .nav-button.active {
+    .nav-button.active, .nav-button:hover {
       background: #eaf3ff;
-      color: var(--admin-blue);
+      color: #1769aa;
       font-weight: bold;
     }
 
-    .admin-content {
+    .content {
       min-width: 0;
-      background: var(--admin-white);
-      border: 1px solid var(--admin-border);
-      border-radius: 12px;
-      padding: 24px;
-      min-height: 380px;
+      padding: 23px;
     }
 
-    .admin-panel {
-      display: none;
-    }
+    .panel { display: none; }
+    .panel.active { display: block; }
 
-    .admin-panel.active {
-      display: block;
-    }
-
-    .admin-panel h2 {
-      margin: 0 0 8px;
-      font-size: 21px;
-    }
+    .panel h2 { margin: 0 0 8px; font-size: 21px; }
 
     .panel-description {
-      color: var(--admin-muted);
+      color: #718096;
       font-size: 13px;
       line-height: 1.6;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
 
-    .module-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .module-card {
-      border: 1px solid var(--admin-border);
+    .section {
+      border: 1px solid #e3e9f0;
       border-radius: 9px;
       padding: 17px;
+      margin-bottom: 16px;
     }
 
-    .module-card h3 {
+    .section h3 {
       margin: 0 0 8px;
       font-size: 15px;
     }
 
-    .module-card p {
-      margin: 0;
-      color: var(--admin-muted);
-      font-size: 12px;
-      line-height: 1.6;
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+      margin-top: 15px;
     }
 
-    .module-status {
-      display: inline-block;
-      margin-top: 12px;
-      padding: 5px 9px;
-      background: #fff4df;
-      color: #8b5a08;
-      border-radius: 20px;
-      font-size: 10px;
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 12px;
       font-weight: bold;
     }
 
-    .security-note {
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #dce3e8;
+      border-radius: 7px;
+      padding: 11px;
+      background: white;
+      color: #263445;
+      font-size: 13px;
+    }
+
+    textarea {
+      min-height: 85px;
+      resize: vertical;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #b8d6ee;
+      border-color: #1769aa;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 7px;
+      padding: 10px 15px;
+      background: #1769aa;
+      color: white;
+      font-size: 13px;
+      font-weight: bold;
+      margin-top: 13px;
+    }
+
+    .btn-secondary {
+      background: #e8edf2;
+      color: #263445;
+    }
+
+    .btn-danger { background: #a32c2c; }
+
+    .btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .note {
       background: #f0f6fc;
-      border-left: 4px solid var(--admin-blue);
-      padding: 14px;
-      margin-top: 22px;
+      border-left: 4px solid #1769aa;
+      padding: 13px;
       border-radius: 5px;
       color: #35536f;
       font-size: 12px;
       line-height: 1.6;
+      margin-top: 16px;
     }
 
-    .refresh-button {
-      background: var(--admin-blue);
-      color: white;
-      border: none;
-      border-radius: 7px;
-      padding: 10px 15px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 12px;
-      margin-top: 10px;
+    .superadmin-section {
+      border: 1px solid #e9d8a6;
+      background: #fffaf0;
     }
 
-    .admin-footer {
+    .footer {
       text-align: center;
-      color: var(--admin-muted);
-      padding: 25px 10px;
+      padding: 25px;
+      color: #718096;
       font-size: 12px;
     }
 
     @media (max-width: 850px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
+      .workspace { grid-template-columns: 1fr; }
 
-      .admin-workspace {
-        grid-template-columns: 1fr;
-      }
-
-      .admin-sidebar {
+      .sidebar {
         display: flex;
         flex-wrap: wrap;
         gap: 5px;
       }
 
-      .sidebar-title {
-        width: 100%;
-      }
-
-      .nav-button {
-        width: auto;
-        margin: 0;
-      }
+      .sidebar-label { width: 100%; }
+      .nav-button { width: auto; margin: 0; }
     }
 
-    @media (max-width: 520px) {
-      .admin-container {
-        padding: 15px;
-      }
-
-      .stats-grid {
-        gap: 10px;
-      }
-
-      .stat-card {
-        padding: 15px;
-      }
-
-      .stat-card h3 {
-        font-size: 23px;
-      }
-
-      .module-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .admin-content {
-        padding: 17px;
-      }
+    @media (max-width: 600px) {
+      .container { padding: 14px; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .content { padding: 16px; }
+      .stat { padding: 14px; }
+      .stat strong { font-size: 22px; }
     }
   </style>
 </head>
 
 <body>
 
-<div class="admin-layout">
+<header class="header">
+  <div>
+    <div class="brand">DarjeelingHost</div>
+    <div class="muted" style="color:#c5d4e5;">Platform Administration</div>
+  </div>
 
-  <header class="admin-header">
+  <div class="header-right">
+    <span id="adminEmail">Checking account...</span>
+    <span class="role" id="adminRole">VERIFYING</span>
+    <button type="button" class="logout" id="adminLogout">Logout</button>
+  </div>
+</header>
 
-    <div class="brand">
-      <h1>DarjeelingHost</h1>
-      <p>Platform Administration</p>
-    </div>
+<main class="container">
 
-    <div class="admin-account">
-      <span id="adminEmail">Checking account...</span>
-      <span class="role-label" id="adminRole">VERIFYING</span>
+  <section class="welcome">
+    <h1>Administration Dashboard</h1>
+    <p class="muted">
+      Manage accounts, driver verification, trip operations and platform records.
+    </p>
+  </section>
 
-      <button
-        type="button"
-        class="logout-button"
-        id="adminLogout">
-        Logout
-      </button>
-    </div>
+  <div id="adminMessage" class="message" role="status" aria-live="polite" hidden></div>
 
-  </header>
+  <section class="stats">
+    <article class="stat">
+      <p>Registered Users</p>
+      <strong id="totalUsers">—</strong>
+    </article>
 
-  <main class="admin-container">
+    <article class="stat">
+      <p>Total Trips</p>
+      <strong id="totalTrips">—</strong>
+    </article>
 
-    <section class="welcome">
-      <h2>Administration Dashboard</h2>
-      <p>Manage users, drivers, trips and platform operations.</p>
-    </section>
+    <article class="stat">
+      <p>Notifications</p>
+      <strong id="totalNotifications">—</strong>
+    </article>
 
-    <div
-      id="adminMessage"
-      class="message"
-      role="status"
-      aria-live="polite"
-      hidden>
-    </div>
+    <article class="stat">
+      <p>Complaints</p>
+      <strong id="totalComplaints">—</strong>
+    </article>
+  </section>
 
-    <!-- DASHBOARD STATISTICS -->
+  <section class="workspace">
 
-    <section class="stats-grid">
+    <aside class="sidebar">
+      <div class="sidebar-label">Management</div>
 
-      <article class="stat-card">
-        <p>Total Registered Users</p>
-        <h3 id="totalUsers">—</h3>
-      </article>
+      <button class="nav-button active" data-tab="overview">Overview</button>
+      <button class="nav-button" data-tab="users">Users</button>
+      <button class="nav-button" data-tab="drivers">Driver Verification</button>
+      <button class="nav-button" data-tab="trips">Trip Management</button>
+      <button class="nav-button" data-tab="payments">Payments</button>
+      <button class="nav-button" data-tab="complaints">Complaints</button>
+      <button class="nav-button" data-tab="announcements">Announcements</button>
+      <button class="nav-button" data-tab="security">Security</button>
+    </aside>
 
-      <article class="stat-card">
-        <p>Total Trips</p>
-        <h3 id="totalTrips">—</h3>
-      </article>
+    <div class="content">
 
-      <article class="stat-card">
-        <p>Notifications</p>
-        <h3 id="totalNotifications">—</h3>
-      </article>
+      <!-- OVERVIEW -->
+      <section class="panel active" id="panel-overview">
+        <h2>Platform Overview</h2>
+        <p class="panel-description">
+          Administrative controls are protected by Firebase custom claims.
+          Use the sections to perform authorised operations.
+        </p>
 
-      <article class="stat-card">
-        <p>Complaints</p>
-        <h3 id="totalComplaints">—</h3>
-      </article>
-
-    </section>
-
-    <!-- ADMIN WORKSPACE -->
-
-    <section class="admin-workspace">
-
-      <aside class="admin-sidebar">
-
-        <div class="sidebar-title">
-          Management
-        </div>
-
-        <button
-          class="nav-button active"
-          data-tab="overview">
-          Overview
-        </button>
-
-        <button
-          class="nav-button"
-          data-tab="users">
-          Users
-        </button>
-
-        <button
-          class="nav-button"
-          data-tab="drivers">
-          Driver Verification
-        </button>
-
-        <button
-          class="nav-button"
-          data-tab="trips">
-          Trip Management
-        </button>
-
-        <button
-          class="nav-button"
-          data-tab="payments">
-          Payments
-        </button>
-
-        <button
-          class="nav-button"
-          data-tab="complaints">
-          Complaints
-        </button>
-
-        <button
-          class="nav-button"
-          data-tab="notifications">
-          Notifications
-        </button>
-
-        <button
-          class="nav-button"
-          data-tab="security">
-          Security & Settings
-        </button>
-
-      </aside>
-
-      <div class="admin-content">
-
-        <!-- OVERVIEW -->
-
-        <section
-          class="admin-panel active"
-          id="panel-overview">
-
-          <h2>Platform Overview</h2>
-
-          <p class="panel-description">
-            Welcome to the DarjeelingHost administration
-            workspace. Use the management sections to
-            supervise platform operations.
+        <div class="section">
+          <h3>Platform Statistics</h3>
+          <p class="muted">
+            Counts are retrieved from Firestore. They do not represent
+            verified or approved totals.
           </p>
-
-          <div class="module-grid">
-
-            <article class="module-card">
-              <h3>User Management</h3>
-              <p>
-                Review registered drivers and brokers.
-                Manage account status and access.
-              </p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Driver Verification</h3>
-              <p>
-                Review driver information, licence details
-                and vehicle documents.
-              </p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Trip Operations</h3>
-              <p>
-                Monitor trip listings, requests, assignments
-                and completion.
-              </p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Financial Records</h3>
-              <p>
-                Monitor agreed fares, payments, outstanding
-                balances and disputes.
-              </p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-          </div>
-
-          <button
-            type="button"
-            class="refresh-button"
-            id="refreshStatistics">
+          <button type="button" class="btn" id="refreshStatistics">
             Refresh Statistics
           </button>
+        </div>
 
-        </section>
+        <div class="note">
+          This dashboard sends administrative requests to trusted Firebase
+          Cloud Functions. It does not grant permissions by changing browser
+          interface values.
+        </div>
+      </section>
 
-        <!-- USERS -->
+      <!-- USERS -->
+      <section class="panel" id="panel-users">
+        <h2>User Management</h2>
+        <p class="panel-description">
+          Approve, reject, suspend and restore driver or broker accounts.
+          Enter the user's Firebase Authentication UID.
+        </p>
 
-        <section class="admin-panel" id="panel-users">
-
-          <h2>User Management</h2>
-
-          <p class="panel-description">
-            Manage driver and broker accounts, review
-            registration status and monitor account activity.
-          </p>
-
-          <div class="module-grid">
-
-            <article class="module-card">
-              <h3>Pending Registrations</h3>
-              <p>Review new account applications.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Active Accounts</h3>
-              <p>Review active driver and broker accounts.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Suspended Accounts</h3>
-              <p>Review suspended accounts and restoration requests.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
+        <form class="section">
+          <h3>Account Approval</h3>
+          <div class="field">
+            <label for="approveUserId">User UID</label>
+            <input id="approveUserId" name="userId" required>
           </div>
+          <button class="btn" type="button" data-admin-action="approveUser"
+            data-user-id="">Approve User</button>
+        </form>
 
-        </section>
-
-        <!-- DRIVER VERIFICATION -->
-
-        <section class="admin-panel" id="panel-drivers">
-
-          <h2>Driver & Vehicle Verification</h2>
-
-          <p class="panel-description">
-            Review driver profiles, driving licence information,
-            vehicle details and submitted documents.
-          </p>
-
-          <div class="module-grid">
-
-            <article class="module-card">
-              <h3>Driver Applications</h3>
-              <p>Review driver verification requests.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Vehicle Documents</h3>
-              <p>Review registration and vehicle documents.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
+        <form class="section">
+          <h3>Reject Application</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="rejectUserId">User UID</label>
+              <input id="rejectUserId" name="userId" required>
+            </div>
+            <div class="field">
+              <label for="rejectUserReason">Reason</label>
+              <input id="rejectUserReason" name="reason" maxlength="1000">
+            </div>
           </div>
+          <button class="btn btn-danger" type="button"
+            data-admin-action="rejectUser">Reject User</button>
+        </form>
 
-        </section>
-
-        <!-- TRIPS -->
-
-        <section class="admin-panel" id="panel-trips">
-
-          <h2>Trip Management</h2>
-
-          <p class="panel-description">
-            Monitor trip listings, driver requests, assignments,
-            cancellations and completion confirmations.
-          </p>
-
-          <div class="module-grid">
-
-            <article class="module-card">
-              <h3>Trip Listings</h3>
-              <p>Review posted and active trips.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Assignments</h3>
-              <p>Monitor driver requests and trip assignments.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Trip Completion</h3>
-              <p>Monitor independent completion confirmations.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Trip History</h3>
-              <p>Review archived and completed trip records.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
+        <form class="section">
+          <h3>Suspend Account</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="suspendUserId">User UID</label>
+              <input id="suspendUserId" name="userId" required>
+            </div>
+            <div class="field">
+              <label for="suspendReason">Reason</label>
+              <input id="suspendReason" name="reason" maxlength="1000">
+            </div>
           </div>
+          <button class="btn btn-danger" type="button"
+            data-admin-action="suspendUser">Suspend User</button>
+        </form>
 
-        </section>
-
-        <!-- PAYMENTS -->
-
-        <section class="admin-panel" id="panel-payments">
-
-          <h2>Payment Monitoring</h2>
-
-          <p class="panel-description">
-            Monitor payment records between trip posters and
-            assigned drivers. DarjeelingHost does not collect
-            payments in this version.
-          </p>
-
-          <div class="module-grid">
-
-            <article class="module-card">
-              <h3>Unpaid Trips</h3>
-              <p>Monitor outstanding payments.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Partial Payments</h3>
-              <p>Monitor partially settled trips.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Payment Disputes</h3>
-              <p>Review disputed payment records.</p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
+        <form class="section">
+          <h3>Restore Account</h3>
+          <div class="field">
+            <label for="restoreUserId">User UID</label>
+            <input id="restoreUserId" name="userId" required>
           </div>
+          <button class="btn" type="button"
+            data-admin-action="restoreUser">Restore User</button>
+        </form>
+      </section>
 
-        </section>
+      <!-- DRIVER VERIFICATION -->
+      <section class="panel" id="panel-drivers">
+        <h2>Driver Verification</h2>
+        <p class="panel-description">
+          Verify or reject a driver's verification status after reviewing
+          their submitted documents through the authorised review process.
+        </p>
 
-        <!-- COMPLAINTS -->
-
-        <section class="admin-panel" id="panel-complaints">
-
-          <h2>Complaints & Disputes</h2>
-
-          <p class="panel-description">
-            Review complaints submitted by platform users
-            and monitor their resolution.
-          </p>
-
-          <span class="module-status">Integration pending</span>
-
-        </section>
-
-        <!-- NOTIFICATIONS -->
-
-        <section class="admin-panel" id="panel-notifications">
-
-          <h2>Notifications & Announcements</h2>
-
-          <p class="panel-description">
-            Manage platform announcements and administrative
-            notifications. Recipient access will remain restricted.
-          </p>
-
-          <span class="module-status">Integration pending</span>
-
-        </section>
-
-        <!-- SECURITY -->
-
-        <section class="admin-panel" id="panel-security">
-
-          <h2>Security & Platform Settings</h2>
-
-          <p class="panel-description">
-            Manage administrator permissions, audit records
-            and platform-wide settings.
-          </p>
-
-          <div class="module-grid">
-
-            <article class="module-card">
-              <h3>Administrator Access</h3>
-              <p>
-                Super Admin only: grant or revoke administrator
-                privileges.
-              </p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Audit Logs</h3>
-              <p>
-                Review important administrative actions.
-              </p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
-            <article class="module-card">
-              <h3>Platform Settings</h3>
-              <p>
-                Manage approved platform configuration.
-              </p>
-              <span class="module-status">Integration pending</span>
-            </article>
-
+        <form class="section">
+          <h3>Verify Driver</h3>
+          <div class="field">
+            <label for="verifyDriverId">Driver UID</label>
+            <input id="verifyDriverId" name="driverId" required>
           </div>
+          <button class="btn" type="button"
+            data-admin-action="verifyDriver">Verify Driver</button>
+        </form>
 
-          <div class="security-note">
-            Security reminder: administrator permissions must
-            be controlled using Firebase custom claims and
-            trusted server-side operations. Changing a visible
-            role in the browser must never grant administrator
-            access.
+        <form class="section">
+          <h3>Reject Driver Verification</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="rejectDriverId">Driver UID</label>
+              <input id="rejectDriverId" name="driverId" required>
+            </div>
+            <div class="field">
+              <label for="rejectDriverReason">Reason</label>
+              <input id="rejectDriverReason" name="reason" maxlength="1000">
+            </div>
           </div>
+          <button class="btn btn-danger" type="button"
+            data-admin-action="rejectDriverVerification">Reject Verification</button>
+        </form>
 
-        </section>
+        <div class="note">
+          Do not mark a driver as verified until the required identity,
+          driving licence and vehicle documents have actually been reviewed.
+        </div>
+      </section>
 
-      </div>
+      <!-- TRIPS -->
+      <section class="panel" id="panel-trips">
+        <h2>Trip Management</h2>
+        <p class="panel-description">
+          Review trip listings and manage assignments and completed trip records.
+        </p>
 
-    </section>
+        <form class="section">
+          <h3>Review Trip Listing</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="reviewTripId">Trip ID</label>
+              <input id="reviewTripId" name="tripId" required>
+            </div>
+            <div class="field">
+              <label for="tripDecision">Decision</label>
+              <select id="tripDecision" name="decision" required>
+                <option value="">Select decision</option>
+                <option value="approved">Approve</option>
+                <option value="rejected">Reject</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="tripReason">Moderation Reason</label>
+              <textarea id="tripReason" name="reason" maxlength="1000"></textarea>
+            </div>
+          </div>
+          <button class="btn" type="button" data-admin-action="reviewTrip">
+            Submit Trip Review
+          </button>
+        </form>
 
-  </main>
+        <form class="section">
+          <h3>Assign Driver to Trip</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="assignTripId">Trip ID</label>
+              <input id="assignTripId" name="tripId" required>
+            </div>
+            <div class="field">
+              <label for="assignRequestId">Driver Request ID</label>
+              <input id="assignRequestId" name="requestId" required>
+            </div>
+          </div>
+          <button class="btn" type="button" data-admin-action="assignDriver">
+            Assign Driver
+          </button>
+        </form>
 
-  <footer class="admin-footer">
-    DarjeelingHost Administration · V1
-  </footer>
+        <form class="section">
+          <h3>Archive Completed Trip</h3>
+          <div class="field">
+            <label for="archiveTripId">Trip ID</label>
+            <input id="archiveTripId" name="tripId" required>
+          </div>
+          <button class="btn" type="button" data-admin-action="archiveTrip">
+            Archive Trip
+          </button>
+        </form>
 
-</div>
+        <form class="section">
+          <h3>Restore Archived Trip</h3>
+          <div class="field">
+            <label for="restoreTripId">Trip ID</label>
+            <input id="restoreTripId" name="tripId" required>
+          </div>
+          <button class="btn" type="button" data-admin-action="restoreTrip">
+            Restore Trip
+          </button>
+        </form>
 
-<!-- DASHBOARD NAVIGATION -->
+        <form class="section superadmin-section" data-superadmin-only hidden>
+          <h3>Permanent Trip Deletion — Super Admin Only</h3>
+          <p class="muted">
+            This permanently deletes the trip document. Payment and audit
+            records are retained.
+          </p>
+          <div class="field">
+            <label for="deleteTripId">Completed or Archived Trip ID</label>
+            <input id="deleteTripId" name="tripId" required>
+          </div>
+          <div class="field" style="margin-top:12px;">
+            <label>
+              <input type="checkbox" name="confirm" value="true" required
+                style="width:auto;">
+              I understand this deletion cannot be undone.
+            </label>
+          </div>
+          <button class="btn btn-danger" type="button"
+            data-admin-action="permanentlyDeleteCompletedTrip">
+            Permanently Delete Trip
+          </button>
+        </form>
+      </section>
+
+      <!-- PAYMENTS -->
+      <section class="panel" id="panel-payments">
+        <h2>Payment Monitoring</h2>
+        <p class="panel-description">
+          Update payment records for direct settlements between trip posters
+          and assigned drivers. DarjeelingHost does not collect payments.
+        </p>
+
+        <form class="section">
+          <h3>Update Payment Record</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="paymentId">Payment Record ID</label>
+              <input id="paymentId" name="paymentId" required>
+            </div>
+            <div class="field">
+              <label for="paymentStatus">Payment Status</label>
+              <select id="paymentStatus" name="paymentStatus" required>
+                <option value="">Select status</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="partially_paid">Partially Paid</option>
+                <option value="paid">Paid</option>
+                <option value="disputed">Disputed</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="amountPaid">Amount Paid (₹)</label>
+              <input id="amountPaid" name="amountPaid" type="number"
+                min="0" step="1">
+            </div>
+            <div class="field">
+              <label for="paymentReason">Admin Reason</label>
+              <input id="paymentReason" name="reason" maxlength="1000">
+            </div>
+          </div>
+          <button class="btn" type="button"
+            data-admin-action="updatePaymentRecord">
+            Update Payment Record
+          </button>
+        </form>
+
+        <div class="note">
+          Payment updates currently use the existing Admin Cloud Function.
+          Two-party payment confirmation and automatic balance validation
+          still need to be implemented before production.
+        </div>
+      </section>
+
+      <!-- COMPLAINTS -->
+      <section class="panel" id="panel-complaints">
+        <h2>Complaints & Disputes</h2>
+        <p class="panel-description">
+          Review a complaint and record its administrative resolution.
+        </p>
+
+        <form class="section">
+          <h3>Review Complaint</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="complaintId">Complaint ID</label>
+              <input id="complaintId" name="complaintId" required>
+            </div>
+            <div class="field">
+              <label for="complaintStatus">Decision</label>
+              <select id="complaintStatus" name="status" required>
+                <option value="">Select status</option>
+                <option value="under_review">Under Review</option>
+                <option value="resolved">Resolved</option>
+                <option value="dismissed">Dismissed</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="complaintReason">Admin Notes</label>
+              <textarea id="complaintReason" name="reason" maxlength="1000"></textarea>
+            </div>
+          </div>
+          <button class="btn" type="button"
+            data-admin-action="reviewComplaint">
+            Submit Complaint Review
+          </button>
+        </form>
+      </section>
+
+      <!-- ANNOUNCEMENTS -->
+      <section class="panel" id="panel-announcements">
+        <h2>Announcements</h2>
+        <p class="panel-description">
+          Publish a platform-wide announcement for active users.
+        </p>
+
+        <form class="section">
+          <h3>Publish Announcement</h3>
+          <div class="field">
+            <label for="announcement">Announcement Message</label>
+            <textarea id="announcement" name="announcement"
+              maxlength="2000" required></textarea>
+          </div>
+          <button class="btn" type="button"
+            data-admin-action="publishAnnouncement">
+            Publish Announcement
+          </button>
+        </form>
+      </section>
+
+      <!-- SECURITY -->
+      <section class="panel" id="panel-security">
+        <h2>Security & Administrator Access</h2>
+        <p class="panel-description">
+          Administrator access is controlled by Firebase custom claims.
+        </p>
+
+        <form class="section superadmin-section" data-superadmin-only hidden>
+          <h3>Grant or Revoke Admin Access</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="targetUid">Target User UID</label>
+              <input id="targetUid" name="targetUid" required>
+            </div>
+            <div class="field">
+              <label for="adminAction">Action</label>
+              <select id="adminAction" name="action" required>
+                <option value="">Select action</option>
+                <option value="grant">Grant Admin</option>
+                <option value="revoke">Revoke Admin</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn" type="button"
+            data-admin-action="manageAdminAccess">
+            Apply Administrator Change
+          </button>
+        </form>
+
+        <div class="note">
+          Only the Super Admin can grant or revoke Admin access.
+          Admin accounts cannot grant themselves additional privileges.
+          All administrative actions should be recorded in audit logs.
+        </div>
+      </section>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  DarjeelingHost Administration · V1
+</footer>
 
 <script>
-  document.querySelectorAll("[data-tab]").forEach((button) => {
-
+  document.querySelectorAll("[data-tab]").forEach(button => {
     button.addEventListener("click", () => {
-
       const tab = button.dataset.tab;
 
-      document.querySelectorAll(".nav-button")
-        .forEach((item) => {
-          item.classList.remove("active");
-        });
+      document.querySelectorAll(".nav-button").forEach(item => {
+        item.classList.toggle("active", item === button);
+      });
 
-      document.querySelectorAll(".admin-panel")
-        .forEach((panel) => {
-          panel.classList.remove("active");
-        });
-
-      button.classList.add("active");
-
-      const selectedPanel = document.getElementById(
-        "panel-" + tab
-      );
-
-      if (selectedPanel) {
-        selectedPanel.classList.add("active");
-      }
-
+      document.querySelectorAll(".panel").forEach(panel => {
+        panel.classList.toggle(
+          "active",
+          panel.id === `panel-${tab}`
+        );
+      });
     });
-
   });
-
-  document.getElementById("refreshStatistics")
-    ?.addEventListener("click", async () => {
-
-      if (window.DarjAdmin?.refreshStatistics) {
-        await window.DarjAdmin.refreshStatistics();
-      }
-
-    });
 </script>
-
-<!-- FIREBASE ADMIN MODULE -->
 
 <script type="module" src="js/admin.js"></script>
 
