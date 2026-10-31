@@ -5,7 +5,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // =========================================
-    // AUTHENTICATION AND ROLE HELPERS
+    // AUTHENTICATION HELPERS
     // =========================================
 
     function signedIn() {
@@ -59,14 +59,6 @@ service cloud.firestore {
         ).data.role == 'broker';
     }
 
-    function validPosterRole() {
-      return activeUser()
-        && request.resource.data.posterRole ==
-          get(
-            /databases/$(database)/documents/users/$(request.auth.uid)
-          ).data.role;
-    }
-
     // =========================================
     // USERS
     // =========================================
@@ -77,7 +69,6 @@ service cloud.firestore {
 
       allow list: if isPrivileged();
 
-      // Public registration only for driver/broker.
       allow create: if isOwner(uid)
         && request.resource.data.keys().hasOnly([
           'uid',
@@ -92,17 +83,12 @@ service cloud.firestore {
           'updatedAt'
         ])
         && request.resource.data.uid == uid
-        && request.resource.data.role in [
-          'driver',
-          'broker'
-        ]
+        && request.resource.data.role in ['driver', 'broker']
         && request.resource.data.status == 'pending'
         && request.resource.data.verificationStatus == 'pending'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
-      // Users may only update limited personal fields.
-      // Administrative changes must use trusted backend functions.
       allow update: if isOwner(uid)
         && activeUser()
         && request.resource.data.diff(resource.data)
@@ -124,9 +110,6 @@ service cloud.firestore {
 
     match /trips/{tripId} {
 
-      // Approved open trips can be read by active users.
-      // The poster and assigned driver can read their own trip.
-      // Administrators can review all trips.
       allow get, list: if isPrivileged()
         || (
           activeUser()
@@ -142,11 +125,11 @@ service cloud.firestore {
           && resource.data.moderationStatus == 'approved'
         );
 
-      // Only active Driver and Broker accounts can post trips.
+      // Only approved active Driver and Broker accounts
+      // can create a trip listing.
       allow create: if (
           activeDriver() || activeBroker()
         )
-        && validPosterRole()
         && request.resource.data.keys().hasOnly([
           'pickupLocation',
           'source',
@@ -168,6 +151,10 @@ service cloud.firestore {
           'updatedAt'
         ])
         && request.resource.data.posterUid == request.auth.uid
+        && request.resource.data.posterRole ==
+          get(
+            /databases/$(database)/documents/users/$(request.auth.uid)
+          ).data.role
         && request.resource.data.status == 'open'
         && request.resource.data.moderationStatus == 'pending'
         && request.resource.data.createdAt == request.time
@@ -213,8 +200,8 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 2000
         && request.resource.data.posterName is string;
 
-      // A poster may archive or restore their own completed trip.
-      // No client-side assignment, moderation or payment changes.
+      // The poster may soft-archive or restore their own
+      // completed trip. Assignment and completion are backend-only.
       allow update: if activeUser()
         && resource.data.posterUid == request.auth.uid
         && resource.data.status == 'completed'
@@ -228,7 +215,6 @@ service cloud.firestore {
         && request.resource.data.archived is bool
         && request.resource.data.updatedAt == request.time;
 
-      // Trip deletion must go through the controlled backend process.
       allow delete: if false;
     }
 
@@ -238,39 +224,12 @@ service cloud.firestore {
 
     match /tripRequests/{requestId} {
 
-      function requestedTripExists() {
-        return exists(
-          /databases/$(database)/documents/trips/$(request.resource.data.tripId)
-        );
-      }
+      // Request creation, acceptance and rejection
+      // are exclusively controlled by Cloud Functions.
+      allow create, update, delete: if false;
 
-      allow create: if activeDriver()
-        && request.resource.data.keys().hasOnly([
-          'tripId',
-          'driverUid',
-          'driverName',
-          'message',
-          'offeredFare',
-          'status',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.driverUid == request.auth.uid
-        && request.resource.data.status == 'pending'
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.tripId is string
-        && requestedTripExists()
-        && get(
-          /databases/$(database)/documents/trips/$(request.resource.data.tripId)
-        ).data.status == 'open'
-        && get(
-          /databases/$(database)/documents/trips/$(request.resource.data.tripId)
-        ).data.moderationStatus == 'approved'
-        && get(
-          /databases/$(database)/documents/trips/$(request.resource.data.tripId)
-        ).data.posterUid != request.auth.uid;
-
+      // Driver and poster can read their own requests.
+      // Admins can read all requests.
       allow get, list: if isPrivileged()
         || (
           activeUser()
@@ -279,9 +238,6 @@ service cloud.firestore {
             || resource.data.posterUid == request.auth.uid
           )
         );
-
-      // Requests must be accepted/rejected through backend functions.
-      allow update, delete: if false;
     }
 
     // =========================================
@@ -296,18 +252,13 @@ service cloud.firestore {
           && resource.data.recipientUid == request.auth.uid
         );
 
-      // Notifications are created by trusted backend functions.
       allow create: if false;
 
-      // Recipients may only mark their own notifications as read.
       allow update: if signedIn()
         && resource.data.recipientUid == request.auth.uid
         && request.resource.data.diff(resource.data)
           .affectedKeys()
-          .hasOnly([
-            'read',
-            'readAt'
-          ])
+          .hasOnly(['read', 'readAt'])
         && request.resource.data.read == true;
 
       allow delete: if false;
@@ -328,7 +279,6 @@ service cloud.firestore {
           )
         );
 
-      // Payment records must be changed through trusted backend.
       allow create, update, delete: if false;
     }
 
@@ -363,7 +313,7 @@ service cloud.firestore {
     }
 
     // =========================================
-    // DRIVER DOCUMENT METADATA
+    // DRIVER DOCUMENTS
     // =========================================
 
     match /driverDocuments/{documentId} {
@@ -374,8 +324,6 @@ service cloud.firestore {
           && resource.data.ownerUid == request.auth.uid
         );
 
-      // Document upload and verification need controlled backend
-      // and Firebase Storage rules.
       allow create, update, delete: if false;
     }
 
@@ -387,7 +335,6 @@ service cloud.firestore {
 
       allow get, list: if isPrivileged();
 
-      // Only trusted backend functions may create audit records.
       allow create, update, delete: if false;
     }
 
@@ -403,12 +350,26 @@ service cloud.firestore {
     }
 
     // =========================================
-    // SUPER ADMIN BOOTSTRAP LOCK
+    // ANNOUNCEMENTS
+    // =========================================
+
+    match /announcements/{announcementId} {
+
+      allow get, list: if isPrivileged()
+        || (
+          activeUser()
+          && resource.data.active == true
+        );
+
+      allow create, update, delete: if false;
+    }
+
+    // =========================================
+    // SYSTEM DOCUMENTS
     // =========================================
 
     match /system/{documentId} {
 
-      // No direct client access to bootstrap and system controls.
       allow read, write: if false;
     }
 
