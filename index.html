@@ -1,25 +1,21 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#102b46">
-  <meta name="description" content="DarjeelingHost connects local drivers, brokers and travel agents for reliable trip outsourcing across the Darjeeling hills.">
-
+  <meta name="description" content="DarjeelingHost connects local drivers, brokers and travel agents across Darjeeling and neighbouring Himalayan destinations.">
   <title>DarjeelingHost | Local Mobility Network</title>
-
   <link rel="stylesheet" href="css/style.css">
 
   <style>
-    /* Temporary homepage styling until the shared stylesheet is added. */
     :root {
       --navy: #102b46;
       --blue: #1769aa;
       --light: #f3f6fa;
       --text: #253449;
       --muted: #69788b;
-      --white: #ffffff;
+      --white: #fff;
     }
 
     * { box-sizing: border-box; }
@@ -39,7 +35,7 @@
     }
 
     header {
-      background: var(--white);
+      background: white;
       border-bottom: 1px solid #e5eaf0;
       position: sticky;
       top: 0;
@@ -66,7 +62,7 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 24px;
+      gap: 20px;
       font-size: 14px;
       font-weight: 600;
     }
@@ -110,9 +106,7 @@
       padding: 90px 0;
     }
 
-    .hero-content {
-      max-width: 720px;
-    }
+    .hero-content { max-width: 720px; }
 
     .eyebrow {
       color: #b9dcfa;
@@ -167,7 +161,7 @@
       line-height: 1.7;
     }
 
-    .features {
+    .features, .steps {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 20px;
@@ -196,21 +190,13 @@
       margin: 18px 0 10px;
     }
 
-    .feature-card p {
+    .feature-card p, .step p {
       color: var(--muted);
       line-height: 1.7;
       font-size: 14px;
     }
 
-    .how {
-      background: white;
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 25px;
-    }
+    .how { background: white; }
 
     .step-number {
       color: var(--blue);
@@ -219,12 +205,6 @@
     }
 
     .step h3 { color: var(--navy); }
-
-    .step p {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.7;
-    }
 
     .cta {
       background: #eaf2f9;
@@ -279,7 +259,6 @@
 
     @media(max-width: 760px) {
       .navbar { flex-wrap: wrap; padding: 15px 0; }
-
       .menu-toggle { display: block; }
 
       .nav-links {
@@ -292,15 +271,10 @@
       }
 
       .nav-links.open { display: flex; }
-
       .nav-actions { margin-left: auto; }
-
       .features, .steps { grid-template-columns: 1fr; }
-
       .hero { padding: 65px 0; }
-
       .hero h1 { font-size: 40px; }
-
       section { padding: 48px 0; }
     }
 
@@ -324,8 +298,11 @@
       Darjeeling<span>Host</span>
     </a>
 
-    <button class="menu-toggle" id="menuToggle"
-      aria-label="Toggle navigation" aria-expanded="false">
+    <button
+      class="menu-toggle"
+      id="menuToggle"
+      aria-label="Toggle navigation"
+      aria-expanded="false">
       ☰
     </button>
 
@@ -334,6 +311,7 @@
       <a href="#about">About</a>
       <a href="#how-it-works">How It Works</a>
       <a href="#join">Join Us</a>
+      <a href="owner-management.html">Owner</a>
     </nav>
 
     <div class="nav-actions">
@@ -349,7 +327,6 @@
   <section class="hero">
     <div class="container">
       <div class="hero-content">
-
         <div class="eyebrow">Local Mobility Network</div>
 
         <h1>Connecting Drivers. Creating Opportunities.</h1>
@@ -369,14 +346,12 @@
             Access Your Account
           </a>
         </div>
-
       </div>
     </div>
   </section>
 
   <section id="about">
     <div class="container">
-
       <div class="section-heading">
         <h2>A Better Way to Connect Local Transport</h2>
         <p>
@@ -387,7 +362,6 @@
       </div>
 
       <div class="features">
-
         <article class="feature-card">
           <div class="feature-icon">🚗</div>
           <h3>For Drivers</h3>
@@ -414,14 +388,12 @@
             transparency, accountability and opportunity.
           </p>
         </article>
-
       </div>
     </div>
   </section>
 
   <section class="how" id="how-it-works">
     <div class="container">
-
       <div class="section-heading">
         <h2>How It Works</h2>
         <p>
@@ -431,7 +403,6 @@
       </div>
 
       <div class="steps">
-
         <div class="step">
           <div class="step-number">STEP 01</div>
           <h3>Create Your Account</h3>
@@ -458,27 +429,22 @@
             trip completion and settlement records.
           </p>
         </div>
-
       </div>
     </div>
   </section>
 
   <section id="join">
     <div class="container">
-
       <div class="cta">
         <h2>Be Part of the Network</h2>
-
         <p>
           Join a growing local mobility network built for
           drivers and travel professionals of the hills.
         </p>
-
         <a href="register.html" class="btn btn-primary">
           Register Now
         </a>
       </div>
-
     </div>
   </section>
 
@@ -486,7 +452,6 @@
 
 <footer>
   <div class="container footer-content">
-
     <div>
       <strong>DarjeelingHost</strong>
       <p>Connecting local mobility opportunities.</p>
@@ -495,10 +460,10 @@
     <div class="footer-links">
       <a href="login.html">Login</a>
       <a href="register.html">Register</a>
+      <a href="owner-management.html">Owner</a>
     </div>
 
     <p>© <span id="year"></span> DarjeelingHost</p>
-
   </div>
 </footer>
 
