@@ -1,0 +1,402 @@
+
+import { auth, db, logoutUser } from "./firebase.js";
+
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
+import {
+  collection,
+  query,
+  where,
+  limit,
+  onSnapshot,
+  doc,
+  updateDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+const notificationList = document.getElementById("notificationList");
+const notificationCount = document.getElementById("notificationCount");
+const markAllReadBtn = document.getElementById("markAllReadBtn");
+const messageBox = document.getElementById("notificationMessage");
+
+let currentUser = null;
+let notifications = [];
+let activeFilter = "all";
+let unsubscribeNotifications = null;
+
+function showMessage(message, type = "error") {
+  messageBox.textContent = message;
+  messageBox.className = `message show ${type}`;
+}
+
+function clearMessage() {
+  messageBox.textContent = "";
+  messageBox.className = "message";
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return "Date unavailable";
+
+  const date = timestamp.toDate
+    ? timestamp.toDate()
+    : new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+
+  return date.toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
+}
+
+function getIcon(type) {
+  const icons = {
+    trip: "🚗",
+    request: "📩",
+    assignment: "✅",
+    completion: "🏁",
+    payment: "💰",
+    account: "👤",
+    verification: "🛡️",
+    announcement: "📢",
+    complaint: "⚠️"
+  };
+
+  return icons[type] || "🔔";
+}
+
+function createElement(tag, className, text) {
+  const element = document.createElement(tag);
+
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+
+  return element;
+}
+
+function isSafeInternalLink(link) {
+  if (typeof link !== "string" || !link.trim()) return false;
+
+  const value = link.trim();
+
+  return (
+    !value.startsWith("//") &&
+    !value.includes(":") &&
+    !value.startsWith("/") &&
+    !value.includes("\\") &&
+    !value.includes("..")
+  );
+}
+
+function getVisibleNotifications() {
+  if (activeFilter === "unread") {
+    return notifications.filter(item => item.read !== true);
+  }
+
+  if (activeFilter === "read") {
+    return notifications.filter(item => item.read === true);
+  }
+
+  return notifications;
+}
+
+function renderNotifications() {
+  notificationList.replaceChildren();
+
+  const unreadCount = notifications.filter(
+    item => item.read !== true
+  ).length;
+
+  notificationCount.textContent =
+    `${notifications.length} notifications · ${unreadCount} unread`;
+
+  markAllReadBtn.disabled = unreadCount === 0;
+
+  const visible = getVisibleNotifications();
+
+  if (visible.length === 0) {
+    const empty = createElement("div", "empty-state");
+
+    const heading = createElement(
+      "strong",
+      "",
+      notifications.length === 0
+        ? "No notifications yet"
+        : "Nothing to display"
+    );
+
+    const description = createElement(
+      "p",
+      "",
+      notifications.length === 0
+        ? "New trip updates and account messages will appear here."
+        : "There are no notifications in this filter."
+    );
+
+    empty.append(heading, description);
+    notificationList.appendChild(empty);
+    return;
+  }
+
+  visible.forEach(item => {
+    notificationList.appendChild(createNotificationElement(item));
+  });
+}
+
+function createNotificationElement(item) {
+  const wrapper = createElement(
+    "article",
+    `notification ${item.read === true ? "" : "unread"}`
+  );
+
+  const icon = createElement(
+    "div",
+    "notification-icon",
+    getIcon(item.type)
+  );
+
+  const content = createElement("div", "notification-content");
+
+  const title = createElement(
+    "h3",
+    "notification-title",
+    item.title || "DarjeelingHost notification"
+  );
+
+  const description = createElement(
+    "p",
+    "notification-message",
+    item.message || "You have received a new notification."
+  );
+
+  const time = createElement(
+    "span",
+    "notification-time",
+    formatDate(item.createdAt)
+  );
+
+  content.append(title, description, time);
+
+  if (isSafeInternalLink(item.link)) {
+    const link = createElement("a", "", "View details");
+    link.href = item.link;
+    link.style.display = "inline-block";
+    link.style.marginTop = "8px";
+    link.style.color = "#245b78";
+    link.style.fontSize = "13px";
+    link.style.textDecoration = "none";
+
+    content.appendChild(link);
+  }
+
+  if (item.read !== true) {
+    const markReadButton = createElement(
+      "button",
+      "btn",
+      "Mark as read"
+    );
+
+    markReadButton.type = "button";
+    markReadButton.style.marginTop = "10px";
+
+    markReadButton.addEventListener("click", () => {
+      markNotificationRead(item.id, markReadButton);
+    });
+
+    content.appendChild(markReadButton);
+  }
+
+  const unreadDot = item.read !== true
+    ? createElement("span", "unread-dot")
+    : null;
+
+  wrapper.append(icon, content);
+
+  if (unreadDot) wrapper.appendChild(unreadDot);
+
+  return wrapper;
+}
+
+async function markNotificationRead(notificationId, button) {
+  if (!currentUser) return;
+
+  button.disabled = true;
+
+  try {
+    const notificationRef = doc(
+      db,
+      "notifications",
+      notificationId
+    );
+
+    await updateDoc(notificationRef, {
+      read: true,
+      readAt: serverTimestamp()
+    });
+
+  } catch (error) {
+    console.error("Mark notification read error:", error);
+    showMessage("Unable to update this notification. Please try again.");
+    button.disabled = false;
+  }
+}
+
+async function markAllNotificationsRead() {
+  if (!currentUser) return;
+
+  const unread = notifications.filter(
+    item => item.read !== true
+  );
+
+  if (unread.length === 0) return;
+
+  markAllReadBtn.disabled = true;
+  markAllReadBtn.textContent = "Updating...";
+
+  try {
+    await Promise.all(
+      unread.map(item =>
+        updateDoc(
+          doc(db, "notifications", item.id),
+          {
+            read: true,
+            readAt: serverTimestamp()
+          }
+        )
+      )
+    );
+
+    showMessage("All notifications marked as read.", "success");
+
+  } catch (error) {
+    console.error("Mark all notifications error:", error);
+    showMessage(
+      "Some notifications could not be updated. Please refresh and try again."
+    );
+
+  } finally {
+    markAllReadBtn.textContent = "Mark All as Read";
+    renderNotifications();
+  }
+}
+
+function startNotificationListener(user) {
+  if (unsubscribeNotifications) {
+    unsubscribeNotifications();
+    unsubscribeNotifications = null;
+  }
+
+  const notificationsQuery = query(
+    collection(db, "notifications"),
+    where("recipientUid", "==", user.uid),
+    limit(100)
+  );
+
+  unsubscribeNotifications = onSnapshot(
+    notificationsQuery,
+    snapshot => {
+      notifications = snapshot.docs.map(notificationDoc => ({
+        id: notificationDoc.id,
+        ...notificationDoc.data()
+      }));
+
+      notifications.sort((a, b) => {
+        const dateA = a.createdAt?.toMillis
+          ? a.createdAt.toMillis()
+          : 0;
+
+        const dateB = b.createdAt?.toMillis
+          ? b.createdAt.toMillis()
+          : 0;
+
+        return dateB - dateA;
+      });
+
+      clearMessage();
+      renderNotifications();
+    },
+    error => {
+      console.error("Notifications listener error:", error);
+
+      notificationList.replaceChildren();
+
+      const empty = createElement("div", "empty-state");
+      empty.appendChild(
+        createElement(
+          "strong",
+          "",
+          "Unable to load notifications"
+        )
+      );
+      empty.appendChild(
+        createElement(
+          "p",
+          "",
+          "Please refresh the page or contact platform support."
+        )
+      );
+
+      notificationList.appendChild(empty);
+
+      showMessage(
+        "There was a problem accessing your notifications. Check your Firebase rules and connection."
+      );
+    }
+  );
+}
+
+document.querySelectorAll("[data-filter]").forEach(button => {
+  button.addEventListener("click", () => {
+    activeFilter = button.dataset.filter;
+
+    document.querySelectorAll("[data-filter]").forEach(filterButton => {
+      filterButton.classList.toggle(
+        "active",
+        filterButton === button
+      );
+    });
+
+    renderNotifications();
+  });
+});
+
+markAllReadBtn.addEventListener(
+  "click",
+  markAllNotificationsRead
+);
+
+document.getElementById("logoutBtn").addEventListener(
+  "click",
+  async () => {
+    try {
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+      }
+
+      await logoutUser();
+      window.location.replace("login.html");
+
+    } catch (error) {
+      console.error("Logout error:", error);
+      showMessage("Unable to log out. Please try again.");
+    }
+  }
+);
+
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+
+  if (!user) {
+    if (unsubscribeNotifications) {
+      unsubscribeNotifications();
+      unsubscribeNotifications = null;
+    }
+
+    window.location.replace("login.html");
+    return;
+  }
+
+  startNotificationListener(user);
+});
